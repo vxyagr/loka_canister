@@ -4,7 +4,7 @@
       "main": "src/loka/main.mo",
       "type": "motoko",
       "dependencies": [
-        "lkrc",
+        
         "lbtc",
         "lklm"
     ]

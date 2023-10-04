@@ -16,17 +16,19 @@ import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Result "mo:base/Result";
 
-import LKRC "canister:lkrc";
+//import LKRC "canister:lkrc";
 import LBTC "canister:lbtc";
 import LKLM "canister:lklm";
 
 
 import T "types";
+import IT "icrcTypes"
 
 
 actor {
-
-  /*
+   
+          /*
+          
   VARIABLES AND OBJECTS
 
       STABLE VARIABLES AND OBJECTS
@@ -212,6 +214,9 @@ public shared(message) func mintContract(amount_: Nat, duration_: Nat, durationT
   }
 };
 
+
+
+
 public shared(message) func distributeBTC(amount_ : Nat, satsUsd : Nat) : async Nat {
   let satsPerHashrate = amount_ / totalConsumedHashrate;
   var releasedHashrate = 0;
@@ -257,6 +262,23 @@ public shared(message) func rechargeLET(id_ : Nat, amount_ : Nat) : async Nat {
 };
 
 
+/*
+public shared(message) func transferLBTC(amt_ : Nat, to_ : Text) : async IT.TransferResult{
+let fee_ : IT.Balance = 1;
+let am : IT.Balance = amt_;
+
+ let transferResult = await LBTC.icrc1_transfer({
+    amount = amt_;
+    fee = ?fee_;
+    created_at_time = null;
+    from_subaccount=null;
+    to = {owner=Principal.fromText(to_); subaccount = null};
+    memo = null;
+
+  });
+transferResult
+}; */
+
 public shared(message) func claimBTC(id_ : Nat) : async Nat {
 
   let to_ : T.Account = {owner=message.caller};
@@ -267,8 +289,6 @@ public shared(message) func claimBTC(id_ : Nat) : async Nat {
   if (amount_<=0 or owner_!=caller_) {
     0
   }else{
-  
-  
   let transferResult = await LBTC.icrc1_transfer({
     amount = amount_;
     fee = null;
@@ -276,16 +296,42 @@ public shared(message) func claimBTC(id_ : Nat) : async Nat {
     from_subaccount=null;
     to = {owner=message.caller; subaccount=null};
     memo = null;
-
   });
+  var res = 0;
+  switch (transferResult)  {
+    case (#Ok(number)) {
+      miningReward_.claimableBTC := 0;
+      miningReward_.claimedBTC +=amount_;
+      miningRewards.put(id_,miningReward_);
+      res :=1;
+    };
+    case (#Err(msg)) {res:=0;};
+  };
 
-  miningReward_.claimableBTC := 0;
-  miningReward_.claimedBTC +=amount_;
-  miningRewards.put(id_,miningReward_);
 
-  1}
+//if(transferResult == #Ok(Nat))
+  
+  res;
+  }
 };
 
+public shared(message) func transfer(id_ : Principal,amnt_ : Nat) : async Nat {
+  let to_ : T.Account = {owner=id_};
+ 
+  let transferResult = await LKLM.icrc1_transfer({
+    amount = amnt_;
+    fee = null;
+    created_at_time = null;
+    from_subaccount=null;
+    to = {owner=message.caller; subaccount=null};
+    memo = null;
+  });
+
+  
+  1
+  
+  
+};
 
 public shared(message) func claimLOM(id_ : Nat) : async Nat {
   let to_ : T.Account = {owner=message.caller};
@@ -296,8 +342,6 @@ public shared(message) func claimLOM(id_ : Nat) : async Nat {
   if (amount_<=0 or owner_!=caller_) {
     0
   }else{
-  
-  
   let transferResult = await LKLM.icrc1_transfer({
     amount = amount_;
     fee = null;
@@ -305,14 +349,23 @@ public shared(message) func claimLOM(id_ : Nat) : async Nat {
     from_subaccount=null;
     to = {owner=message.caller; subaccount=null};
     memo = null;
-
   });
+  var res = 0;
+  switch (transferResult)  {
+    case (#Ok(number)) {
+      miningReward_.claimableLOM := 0;
+      miningReward_.claimedLOM +=amount_;
+      miningRewards.put(id_,miningReward_);
+      res :=1;
+    };
+    case (#Err(msg)) {res:=0;};
+  };
 
-  miningReward_.claimableLOM := 0;
-  miningReward_.claimedLOM +=amount_;
-  miningRewards.put(id_,miningReward_);
 
-  1}
+//if(transferResult == #Ok(Nat))
+  
+  res;
+  }
   
 };
 public shared(message) func pauseContract(pause_ : Bool) : async Bool {
