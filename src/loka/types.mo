@@ -66,6 +66,24 @@ module {
         owner : Text;
         metadata : Text;
         daysLeft : Nat;
+        miningSite : Nat;
+    };
+
+
+    public type MiningSiteStatus = {
+        id : Nat;
+        var status : Bool;
+    };
+    
+    public type MiningSite = {
+        id : Nat;
+        location : Text;
+        name : Text;
+        totalHashrate : Nat;
+        dollarPerHashrate : Float;
+        electricityPerKwh : Float;
+        nftCanisterId : Text;
+        controllerCanisterId : Text;
     };
 
     public type MiningContract = {

@@ -16,373 +16,61 @@ import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Result "mo:base/Result";
 
-//import LKRC "canister:lkrc";
-import LBTC "canister:lbtc";
-import LKLM "canister:lklm";
-
 
 import T "types";
-import IT "icrcTypes"
 
 
-actor {
-   
-          /*
-          
-  VARIABLES AND OBJECTS
+shared ({ caller = owner }) actor class Loka({
+  admin: Principal
+}) {
 
-      STABLE VARIABLES AND OBJECTS
-      1. Mining Contract NFT list
-      2. Mining Contract NFT indexed by principal
-      3. Claimable BTC list
-      4. Claimable LOM list
-      5. BTC distributed
-      6. BTC claimed
-      7. LOM distributed
-      8. LOM claimed
-      9. Genesis NFT list
-
-
-      1. Mining Site ID
-      2. Mining Site Canister
-      3. Available hashrate
-      4. BTC mined
-      5. BTC distributed
-      6. BTC claimed
-      7. Distribution History
-      8. Claim History
-      9. Transaction History
-      10. Collateral Vault
-
-  */
-  private var nftIndex = 0;
+  private var miningSiteIndex = 0;
   private var pause = false : Bool;
   private var totalConsumedHashrate = 0;
+  private var siteAdmin : Principal = admin;
 
-  let miningContracts = Buffer.Buffer<T.MiningContract>(0); 
-  let miningRewards = Buffer.Buffer<T.MiningReward>(0); 
-  let lokaNFTs = Buffer.Buffer<T.LokaNFT>(0); 
+  let miningSiteStatus = Buffer.Buffer<T.MiningSiteStatus>(0);
+  let miningSites = Buffer.Buffer<T.MiningSite>(0);
 
-
-  /*
-  FUNCTIONS
-
-  GETTER
-
-  1. Get Contract NFT Metadata
-  2. Get Owner of a contract
-  3. Get Owned Contracts
-  4. Get Transaction history of a contract (mint, transfer, claim, recharge)
-  5. Get transaction history of a principal
-  6. Get total claimed BTC of a principal
-  7. Get total claimed BTC of a contract
-  8. Get remaining LET
-  9. Get remaining mining days
-  */
-  public query (message) func greet() : async Text {
-    return "Hello, " # Principal.toText(message.caller) # "!1";
-  };
-
-  public query (message) func getOwnedContracts() : async [T.NFTContract]{
-      let ownedContracts = Buffer.mapFilter<T.LokaNFT,T.NFTContract >(lokaNFTs, func (nft) {
-        if (nft.owner==Principal.toText(message.caller)) {
-
-          let nftContract : T.NFTContract = {
-            id = nft.id;
-            owner = nft.owner;
-            amount = miningContracts.get(nft.id).amount;
-            duration = miningContracts.get(nft.id).duration;
-            durationText = miningContracts.get(nft.id).durationText;
-            hashrate = miningContracts.get(nft.id).hashrate;
-            start = miningContracts.get(nft.id).start;
-            end = miningContracts.get(nft.id).end;
-            electricityPerDay = miningContracts.get(nft.id).electricityPerDay;
-            claimedLOM = miningRewards.get(nft.id).claimedLOM;
-            claimedBTC = miningRewards.get(nft.id).claimedBTC;
-            claimableBTC = miningRewards.get(nft.id).claimableBTC;
-            claimableLOM = miningRewards.get(nft.id).claimableLOM;
-            LETBalance = miningRewards.get(nft.id).claimedLOM;
-            metadata = nft.metadata;
-            daysLeft = miningRewards.get(nft.id).daysLeft;
-          };
-          ?nftContract;
-        } else {
-          null;
-        }
-      
-      });
-      Buffer.toArray<T.NFTContract>(ownedContracts);
-  };
-
-
-  public query (message) func getNFTContract(id_ : Nat) : async T.NFTContract{
-      let nft = lokaNFTs.get(id_);
-      //Buffer.mapFilter<T.LokaNFT,T.NFTContract >(lokaNFTs, func (nft) {
-        //if (nft.owner==Principal.toText(message.caller)) {
-
-          let nftContract : T.NFTContract = {
-            id = nft.id;
-            owner = nft.owner;
-            amount = miningContracts.get(nft.id).amount;
-            duration = miningContracts.get(nft.id).duration;
-            durationText = miningContracts.get(nft.id).durationText;
-            hashrate = miningContracts.get(nft.id).hashrate;
-            start = miningContracts.get(nft.id).start;
-            end = miningContracts.get(nft.id).end;
-            electricityPerDay = miningContracts.get(nft.id).electricityPerDay;
-            claimedLOM = miningRewards.get(nft.id).claimedLOM;
-            claimedBTC = miningRewards.get(nft.id).claimedBTC;
-            claimableBTC = miningRewards.get(nft.id).claimableBTC;
-            claimableLOM = miningRewards.get(nft.id).claimableLOM;
-            LETBalance = miningRewards.get(nft.id).LETBalance;
-            metadata = nft.metadata;
-            daysLeft = miningRewards.get(nft.id).daysLeft;
-          };
-          //?nftContract;
-        //} else {
-        //  null;
-       // }
-      
-      //});
-      nftContract;
-  };
-
-  /*public query (message) func getContract(id_ : Nat) : async T.MiningContract{
-      let miningContract_ = miningContracts.get(id_);
-      miningContract_;
-  };*/
-
-  public query (message) func getContractAmount(id_ : Nat) : async Text {
-    let amount_ = miningContracts.get(id_).amount;
-    Nat.toText(amount_);
-  };
-  /*
-
-  SETTER
-  1. Mint (amount, genesis id, duration), pay using ICP
-  2. Transfer (id, from, to)
-  3. DistributeBTC (BTC amount)
-  4. ClaimBTC
-  5. DistributeLOM
-  6. ClaimLOM
-  7. Recharge
-  8. Mint Genesis
-
-  */
-public shared(message) func mintContract(amount_: Nat, duration_: Nat, durationText_ : Text, hashrate_ : Nat, elec_ : Nat, genesis_ : Nat, start_ : Nat, end_ : Nat) : async Nat {
-  if(pause){
-    0
-  }else{
-    
-    let miningContract_ : T.MiningContract = {
-      id = nftIndex;
-      amount = amount_;
-      duration = duration_;
-      durationText = durationText_;
-      hashrate = hashrate_;
-      electricityPerDay = elec_;
-      genesisId = genesis_;
-      start = start_;
-      end = end_;
-      };
-    let lokaNFTs_ : T.LokaNFT = {
-      id = nftIndex;
-      var owner = Principal.toText(message.caller);
-      metadata = "";
-      
+  func _isAdmin(p : Principal) : Bool {
+      return (p == siteAdmin);
     };
-    let miningRewards_ : T.MiningReward = {
-      id = nftIndex;   
-      var claimedBTC = 0;
-      var claimableBTC = 0;
-      var claimableLOM = 0;
-      var claimedLOM = 0;
-      var daysLeft = duration_;
-      var LETBalance = 0;
-      var staked = false;
-      var stakeTime = 0;
-      electricityPerDay = elec_;
-      hashrate = hashrate_;
+
+  public shared(message) func addMiningSite(location_ : Text, name_: Text, elec_ : Float, thCost_ : Float, total_ : Nat, nftCan_ : Text, controlCan_ : Text) : async Nat {
+    assert(_isAdmin(message.caller));
+    let miningSite_ : T.MiningSite= {
+        id = miningSiteIndex;
+        location = location_;
+        name = name_;
+        totalHashrate = total_;
+        dollarPerHashrate = thCost_;
+        electricityPerKwh = elec_;
+        nftCanisterId = nftCan_;
+        controllerCanisterId = controlCan_;
       };
-    miningContracts.add(miningContract_);
-    lokaNFTs.add(lokaNFTs_);
-    miningRewards.add(miningRewards_);
-    totalConsumedHashrate += hashrate_;
     
-    nftIndex +=1;
-    nftIndex-1;
-  }
-};
-
-
-
-
-public shared(message) func distributeBTC(amount_ : Nat, satsUsd : Nat) : async Nat {
-  let satsPerHashrate = amount_ / totalConsumedHashrate;
-  var releasedHashrate = 0;
-  Buffer.iterate<T.MiningReward>(miningRewards, func (rewards) {
-    if(rewards.daysLeft > 0){
-    
-      let remaining = rewards.daysLeft-1;
-      var btcReward = rewards.hashrate*satsPerHashrate; 
-
-      if(rewards.LETBalance > rewards.electricityPerDay){
-        rewards.LETBalance -= rewards.electricityPerDay;
-      }else{
-        btcReward -= rewards.electricityPerDay*satsUsd;
-      };
-      rewards.claimableBTC += rewards.hashrate*satsPerHashrate; 
-      if(remaining==0)releasedHashrate+=rewards.hashrate;
-      rewards.daysLeft -=1;
-    }
-  });
-  //owner only
-  //for as many as NFTs, loop, share as per hashrate
-  //write to history
-  amount_
-};
-
-public shared(message) func distributeLOM(amount_ : Nat) : async Nat {
-  let satsPerHashrate = amount_ / totalConsumedHashrate;
-  var releasedHashrate = 0;
-  Buffer.iterate<T.MiningReward>(miningRewards, func (rewards) {
-    if(rewards.daysLeft > 0){
-    rewards.claimableLOM += rewards.hashrate*satsPerHashrate; 
-    }
-  });
-  //owner only
-  //for as many as NFTs, loop, share as per hashrate
-  //write to history
-  amount_
-};
-
-public shared(message) func rechargeLET(id_ : Nat, amount_ : Nat) : async Nat {
-  
-  1
-};
-
-
-/*
-public shared(message) func transferLBTC(amt_ : Nat, to_ : Text) : async IT.TransferResult{
-let fee_ : IT.Balance = 1;
-let am : IT.Balance = amt_;
-
- let transferResult = await LBTC.icrc1_transfer({
-    amount = amt_;
-    fee = ?fee_;
-    created_at_time = null;
-    from_subaccount=null;
-    to = {owner=Principal.fromText(to_); subaccount = null};
-    memo = null;
-
-  });
-transferResult
-}; */
-
-public shared(message) func claimBTC(id_ : Nat) : async Nat {
-
-  let to_ : T.Account = {owner=message.caller};
-  var miningReward_ : T.MiningReward = miningRewards.get(id_);
-  var owner_ = lokaNFTs.get(id_).owner;
-  var caller_ = Principal.toText(message.caller);
-  let amount_ : T.Balance = miningReward_.claimableBTC;
-  if (amount_<=0 or owner_!=caller_) {
-    0
-  }else{
-  let transferResult = await LBTC.icrc1_transfer({
-    amount = amount_;
-    fee = null;
-    created_at_time = null;
-    from_subaccount=null;
-    to = {owner=message.caller; subaccount=null};
-    memo = null;
-  });
-  var res = 0;
-  switch (transferResult)  {
-    case (#Ok(number)) {
-      miningReward_.claimableBTC := 0;
-      miningReward_.claimedBTC +=amount_;
-      miningRewards.put(id_,miningReward_);
-      res :=1;
-    };
-    case (#Err(msg)) {res:=0;};
+    miningSites.add(miningSite_);
+    miningSiteStatus.add({id = miningSiteIndex; var status = true});
+    miningSiteIndex+=1;
+    miningSiteIndex;
   };
 
-
-//if(transferResult == #Ok(Nat))
-  
-  res;
-  }
-};
-
-public shared(message) func transfer(id_ : Principal,amnt_ : Nat) : async Nat {
-  let to_ : T.Account = {owner=id_};
- 
-  let transferResult = await LKLM.icrc1_transfer({
-    amount = amnt_;
-    fee = null;
-    created_at_time = null;
-    from_subaccount=null;
-    to = {owner=message.caller; subaccount=null};
-    memo = null;
-  });
-
-  
-  1
-  
-  
-};
-
-public shared(message) func claimLOM(id_ : Nat) : async Nat {
-  let to_ : T.Account = {owner=message.caller};
-  var miningReward_ : T.MiningReward = miningRewards.get(id_);
-  var owner_ = lokaNFTs.get(id_).owner;
-  var caller_ = Principal.toText(message.caller);
-  let amount_ : T.Balance = miningReward_.claimableLOM;
-  if (amount_<=0 or owner_!=caller_) {
-    0
-  }else{
-  let transferResult = await LKLM.icrc1_transfer({
-    amount = amount_;
-    fee = null;
-    created_at_time = null;
-    from_subaccount=null;
-    to = {owner=message.caller; subaccount=null};
-    memo = null;
-  });
-  var res = 0;
-  switch (transferResult)  {
-    case (#Ok(number)) {
-      miningReward_.claimableLOM := 0;
-      miningReward_.claimedLOM +=amount_;
-      miningRewards.put(id_,miningReward_);
-      res :=1;
-    };
-    case (#Err(msg)) {res:=0;};
+  public query(message) func getMiningSites() : async [T.MiningSite] {
+    Buffer.toArray<T.MiningSite>(miningSites);
   };
 
+  public shared(message) func setMiningStatus(id_ : Nat, status_ : Bool) : async Bool {
 
-//if(transferResult == #Ok(Nat))
-  
-  res;
-  }
-  
-};
-public shared(message) func pauseContract(pause_ : Bool) : async Bool {
-  //owner only
-  //for as many as NFTs, loop, share as per hashrate
-  let pause = pause_;
-  pause_
-};
-  
-};
+    var miningSiteStatus_ : T.MiningSiteStatus = miningSiteStatus.get(id_);
+    miningSiteStatus_.status := status_;
+    miningSiteStatus.put(id_,miningSiteStatus_);
 
+    status_;
+  };
 
-/*actor {
-
-  public func greet(name : Text) : async Text {
-    return "Hello, " # name # "!";
+  public query(message) func getMiningSiteStatus(id_ : Nat) : async Bool {
+    var miningSiteStatus_ : T.MiningSiteStatus = miningSiteStatus.get(id_);
+    miningSiteStatus_.status;
   };
 
 };
-*/

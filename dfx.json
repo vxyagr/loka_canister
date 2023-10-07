@@ -2,6 +2,10 @@
   "canisters": {
     "betalk": {
       "main": "src/loka/main.mo",
+      "type": "motoko"
+    },
+    "velo": {
+      "main": "src/loka/lokaVeloController.mo",
       "type": "motoko",
       "dependencies": [
         
@@ -9,8 +13,8 @@
         "lklm"
     ]
     },
-    "lnft": {
-      "main": "src/ext_v2/v2.mo",
+    "velonft": {
+      "main": "src/nft/lokaVeloNFT.mo",
       "type": "motoko"
     },
     "lbtc": {

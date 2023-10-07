@@ -2,11 +2,18 @@
 
 Loka onchain bitcoin mining platform canisters on ICP
 
+Local deployment :
+make sure you have installed npm, nodejs, and ICP Motoko SDK
+
+
+
+
+##deploy tokens (there are 3, this one is example) :
 dfx deploy lkrc --argument '( record {                     
       name = "LKRC";                         
       symbol = "LKRC";                           
       decimals = 6;                                           
-      fee = 1_000_000;                                        
+      fee = 0;                                        
       max_supply = 1_000_000_000_000;                         
       initial_balances = vec {                                
           record {                                            
@@ -22,10 +29,21 @@ dfx deploy lkrc --argument '( record {
       advanced_settings = null;                               
   })'
 
-
-dfx deploy betalk
+and then mint some
 
 dfx canister call lkrc mint '(record {
   to = record {owner = principal "aovwi-4maaa-aaaaa-qaagq-cai"};
   amount=1_000_000_000_000
 },)'
+
+
+
+
+##deploy nft :
+dfx deploy --argument '(principal "your-minting-principal")'
+
+dfx ledger fabricate-cycles --all
+##deploy loka :
+
+dfx deploy betalk
+

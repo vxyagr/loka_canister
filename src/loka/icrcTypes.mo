@@ -9,7 +9,7 @@ import StableBuffer "mo:StableBuffer/StableBuffer";
 module {
 
     public type Value = { #Nat : Nat; #Int : Int; #Blob : Blob; #Text : Text };
-
+    public type AccountIdentifier__1 = Text;
     public type BlockIndex = Nat;
     public type Subaccount = Blob;
     public type Balance = Nat;
@@ -114,6 +114,8 @@ module {
         #TooOld;
         #CreatedInFuture : { ledger_time : Timestamp };
     };
+
+    
 
     public type TransferError = TimeError or {
         #BadFee : { expected_fee : Balance };
