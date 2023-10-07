@@ -13,10 +13,10 @@ Local deployment :
 make sure you have installed npm, nodejs, and ICP Motoko SDK
 
 
-##1. Deploy main loka canister
+## 1. Deploy main loka canister
 dfx deploy loka --argument '(record{admin = principal "your principal"})'
 
-##2. Deploy ICRCs
+## 2. Deploy ICRCs
 
 deploy tokens (there are 3 ICRCS, this one is example) :
 dfx deploy lkrc --argument '( record {                     
@@ -47,7 +47,7 @@ dfx canister call lkrc mint '(record {
 },)'
 
 
-##3. Deploy NFT then mine controller
+## 3. Deploy NFT then mine controller
 
 
 dfx deploy (nft name) --argument '(principal "your-minting-principal")'
