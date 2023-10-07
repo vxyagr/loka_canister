@@ -1,0 +1,52 @@
+{
+  "canisters": {
+    "betalk": {
+      "main": "src/loka/main.mo",
+      "type": "motoko"
+    },
+    "velo": {
+      "main": "src/loka/lokaVeloController.mo",
+      "type": "motoko",
+      "dependencies": [
+        
+        "lbtc",
+        "lklm",
+        "velonft"
+    ]
+    },
+    "velonft": {
+      "main": "src/nft/lokaVeloNFT.mo",
+      "type": "motoko"
+    },
+    "lbtc": {
+      "type": "motoko",
+      "main": "src/ICRC1/Canisters/Token.mo"
+    },
+    "lkrc": {
+      "type": "motoko",
+      "main": "src/ICRC1/Canisters/Token.mo"
+    },
+    "lklm": {
+      "type": "motoko",
+      "main": "src/ICRC1/Canisters/Token.mo"
+    },
+    "test": {
+        "type": "motoko",
+        "main": "tests/ActorTest.mo",
+        "args": "-v --compacting-gc"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "192.168.1.8:8000",
+      "type": "ephemeral"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": "mops sources"
+    }
+  },
+  "version": 1
+}
