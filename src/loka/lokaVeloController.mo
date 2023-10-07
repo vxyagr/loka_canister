@@ -19,7 +19,7 @@ import Result "mo:base/Result";
 //import LKRC "canister:lkrc";
 import LBTC "canister:lbtc";
 import LKLM "canister:lklm";
-import LNFT "canister:lnft";
+import VELONFT "canister:velonft";
 
 
 import T "types";
@@ -154,14 +154,16 @@ public shared(message) func mintContract(miningSite : Nat, amount_: Nat, duratio
     lokaNFTs.add(lokaNFTs_);
     miningRewards.add(miningRewards_);
     totalConsumedHashrate += hashrate_;
-
-    let metadata = null;
-    let receiver : IT.AccountIdentifier__1 = Principal.toText(message.caller);
-    let mintRecord = (receiver, metadata);
+    let nftName = name # " " # Nat.toText(nftIndex);
+    let metadata_ :  T.Metadata = #nonfungible({name=nftName;
+        asset="";
+        thumbnail="";
+        metadata=?#json("null");
+    });
+    let receiver = Principal.toText(message.caller);
+    let mintRecord = (receiver, metadata_);
     let mintArgs = [mintRecord];
-
-   // let mintResult = await LNFT.ext_mint(mintRecord);
-    
+   let mintResult = await VELONFT.ext_mint([receiver, metadata_ ]);  
     nftIndex +=1;
     nftIndex-1;
   

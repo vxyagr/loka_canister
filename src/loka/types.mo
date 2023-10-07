@@ -69,7 +69,7 @@ module {
         miningSite : Nat;
     };
 
-
+    
     public type MiningSiteStatus = {
         id : Nat;
         var status : Bool;
@@ -125,9 +125,37 @@ module {
         id : Nat;
         owner : Principal;
         claimableLOM : Nat;
-    }
+    };
 
     
-  
+  public type MetadataValue = (Text , {
+        #text : Text;
+        #blob : Blob;
+        #nat : Nat;
+        #nat8: Nat8;
+    });
+
+    public type MetadataContainer = {
+      #data : [MetadataValue];
+      #blob : Blob;
+      #json : Text;
+    };
+
+    public type NNWB = Nat;
+
+    public type Metadata = {
+        #fungible : {
+        name : Text;
+        symbol : Text;
+        decimals : Nat8;
+        metadata: ?MetadataContainer;
+        };
+        #nonfungible : {
+        name : Text;
+        asset : Text;
+        thumbnail : Text;
+        metadata: ?MetadataContainer;
+        };
+    };
     
-}
+};

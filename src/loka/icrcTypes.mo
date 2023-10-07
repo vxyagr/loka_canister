@@ -336,4 +336,7 @@ module {
     /// Interface of the ICRC token and Rosetta canister
     public type FullInterface = TokenInterface and RosettaInterface;
 
+
+    
+
 };

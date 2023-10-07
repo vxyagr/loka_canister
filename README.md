@@ -2,13 +2,23 @@
 
 Loka onchain bitcoin mining platform canisters on ICP
 
+Steps to deploy
+1. Main Loka
+2. ICRCs
+3. NFT then Controller for each mining site
+4. Register mining site to Main Loka canister
+
+
 Local deployment :
 make sure you have installed npm, nodejs, and ICP Motoko SDK
 
 
+##1. Deploy main loka canister
+dfx deploy loka --argument '(record{admin = principal "your principal"})'
 
+##2. Deploy ICRCs
 
-##deploy tokens (there are 3, this one is example) :
+deploy tokens (there are 3 ICRCS, this one is example) :
 dfx deploy lkrc --argument '( record {                     
       name = "LKRC";                         
       symbol = "LKRC";                           
@@ -37,13 +47,19 @@ dfx canister call lkrc mint '(record {
 },)'
 
 
+##3. Deploy NFT then mine controller
 
 
-##deploy nft :
-dfx deploy --argument '(principal "your-minting-principal")'
+dfx deploy (nft name) --argument '(principal "your-minting-principal")'
 
-dfx ledger fabricate-cycles --all
-##deploy loka :
+deploy controller
+dfx deploy (controller name) --argument '(record{admin = principal "your principal"})'
 
-dfx deploy betalk
+get your canister id
+dfx canister id nft
+dfx canister id controller
+
+##4. Register controller and NFT to main Loka
+
+dfx canister call loka addMiningSite '(record{location_ = "Jakarta"; name_ = "Velo" ; elec_ = 2; thCost_ = 4; total_ = 4000; nftCan_ = "your nft canister id in step 4"; controlCan_ = "your control canister id in step 4"})'
 

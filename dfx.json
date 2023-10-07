@@ -10,7 +10,8 @@
       "dependencies": [
         
         "lbtc",
-        "lklm"
+        "lklm",
+        "velonft"
     ]
     },
     "velonft": {
