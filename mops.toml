@@ -3,6 +3,8 @@ base = "https://github.com/dfinity/motoko-base#moc-0.7.4"
 array = "https://github.com/aviate-labs/array.mo#v0.2.0"
 StableTrieMap = "https://github.com/NatLabs/StableTrieMap#main"
 StableBuffer = "https://github.com/canscale/StableBuffer#v0.2.0"
+encoding = "https://github.com/aviate-labs/encoding.mo"
+cap = "https://github.com/stephenandrews/cap-motoko-library"
 itertools = "0.1.1"
 
 [package]

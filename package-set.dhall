@@ -8,7 +8,22 @@ let Package =
 let
   -- This is where you can add your own packages to the package-set
   additions =
-    [] : List Package
+     [  { name = "cap"
+  , repo = "https://github.com/stephenandrews/cap-motoko-library"
+  , version = "v1.0.4-alt"
+  , dependencies = [] : List Text
+  },
+      
+  { name = "encoding"
+  , repo = "https://github.com/aviate-labs/encoding.mo"
+  , version = "v0.3.1"
+  , dependencies = [ "array", "base" ]
+  },
+  { name = "array"
+  , repo = "https://github.com/aviate-labs/array.mo"
+  , version = "v0.1.1"
+  , dependencies = [ "base" ]
+  },] : List Package
 
 let overrides = [
     {

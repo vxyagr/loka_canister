@@ -9,7 +9,10 @@
         "lklm"
     ]
     },
-    
+    "lnft": {
+      "main": "src/ext_v2/v2.mo",
+      "type": "motoko"
+    },
     "lbtc": {
       "type": "motoko",
       "main": "src/ICRC1/Canisters/Token.mo"
