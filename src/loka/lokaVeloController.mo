@@ -27,7 +27,7 @@ import IT "icrcTypes"
 
 
 shared ({ caller = owner }) actor class VeloController({
-  admin: Principal; hashrate : Float; electricity : Float; miningSiteIdparam : Nat ; siteName : Text; totalHashrate : Float ; }) {
+  admin: Principal; hashrate : Float; electricity : Float; miningSiteIdparam : Nat ; siteName : Text; totalHashrate : Float; }) {
 
 
   //mining site data
@@ -38,6 +38,7 @@ shared ({ caller = owner }) actor class VeloController({
   private var totalSiteHashrate = totalHashrate;
   //private var hardwareEfficiency = hardwareEfficiency_;
   private var hardwareEfficiency = 38.0;
+  private var synced = 0;
 
 
 
@@ -62,7 +63,7 @@ shared ({ caller = owner }) actor class VeloController({
     
 // GETTERS and CALCULATORS
   //get this canisters admin
-   public query (message) func getAdmin() : async Text {
+  public query (message) func getAdmin() : async Text {
     return Principal.toText(siteAdmin);
   };
 

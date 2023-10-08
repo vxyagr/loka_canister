@@ -53,7 +53,7 @@ dfx canister call lkrc mint '(record {
 dfx deploy (nft name) --argument '(principal "your-minting-principal")'
 
 # deploy controller
-dfx deploy (controller name) --argument '(record{admin = principal "your principal"})'
+dfx deploy velo --argument '(record{admin = principal "your principal id";hashrate=0.03; electricity = 0.035; miningSiteIdparam = 1 ; siteName = "Velo"; totalHashrate =4000.0 ;})' 
 
 get your canister id
 dfx canister id nft
@@ -68,6 +68,6 @@ dfx canister call (nft name) setMinter '(principal "your controller id")'
 eg :
 
 dfx canister call loka addMiningSite '("Location", "Name" ,electricityCost; thCost; total_ = 4000; "your nft canister id in step 3"; "your control canister id in step 3")'
-
+like this
 dfx canister call betalk addMiningSite '("Jakarta", "Velo", 0.04,4.0,4000,"ajuq4-ruaaa-aaaaa-qaaga-cai", "aovwi-4maaa-aaaaa-qaagq-cai")'
 
