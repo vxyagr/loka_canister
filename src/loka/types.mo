@@ -7,23 +7,7 @@ module {
 
     public type OrderId = Nat32;
 
-    /*
-    CLASSES
-    1. Mining Contract
-    id
-    amount
-    genesis id
-    duration
-    TH
-    start
-    end
-    electricity per day
-    LET balance
-    claimed BTC
-    claimed LOM
-
-    */
-     public type TransactionHistory = {
+    public type TransactionHistory = {
         id: Nat;
         caller: Text;
         time : Nat;
@@ -54,15 +38,15 @@ module {
         amount : Nat;
         duration : Nat;
         durationText : Text;
-        hashrate : Nat;
+        hashrate : Float;
         start : Nat;
         end : Nat;
-        electricityPerDay : Nat;
-        claimedLOM : Nat;
-        claimedBTC : Nat;
-        claimableBTC : Nat;
-        claimableLOM : Nat;
-        LETBalance : Nat;
+        electricityPerDay : Float;
+        claimedLOM : Float;
+        claimedBTC : Float;
+        claimableBTC : Float;
+        claimableLOM : Float;
+        LETBalance : Float;
         owner : Text;
         metadata : Text;
         daysLeft : Nat;
@@ -91,11 +75,11 @@ module {
         amount : Nat;
         durationText : Text;
         duration: Nat;      
-        hashrate : Nat;     
+        hashrate : Float;     
         genesisId: Nat;
         start: Nat;
         end : Nat;
-        electricityPerDay: Nat;       
+        electricityPerDay: Float;       
 
     };
 
@@ -109,14 +93,14 @@ module {
 
     public type MiningReward = {
         id : Nat;
-        var claimableBTC : Nat;
-        var claimedBTC : Nat;
-        var claimableLOM : Nat;
-        var claimedLOM : Nat;
+        var claimableBTC : Float;
+        var claimedBTC : Float;
+        var claimableLOM : Float;
+        var claimedLOM : Float;
         var daysLeft : Nat;
-        hashrate : Nat;
-        var LETBalance : Nat;
-        electricityPerDay: Nat;
+        hashrate : Float;
+        var LETBalance : Float;
+        electricityPerDay: Float;
         var staked : Bool;
         var stakeTime : Nat;
     };

@@ -55,14 +55,19 @@ dfx deploy (nft name) --argument '(principal "your-minting-principal")'
 # deploy controller
 dfx deploy (controller name) --argument '(record{admin = principal "your principal"})'
 
-# allow controller as NFT admin
-dfx canister call (nft name) setMinter '(principal "your controller id")'
-
 get your canister id
 dfx canister id nft
 dfx canister id controller
 
-## 4. Register controller and NFT to main Loka
+# allow controller as NFT admin
+dfx canister call (nft name) setMinter '(principal "your controller id")'
 
-dfx canister call loka addMiningSite '(record{location_ = "Jakarta"; name_ = "Velo" ; elec_ = 2; thCost_ = 4; total_ = 4000; nftCan_ = "your nft canister id in step 4"; controlCan_ = "your control canister id in step 4"})'
+
+
+## 4. Register controller and NFT to main Loka
+eg :
+
+dfx canister call loka addMiningSite '("Location", "Name" ,electricityCost; thCost; total_ = 4000; "your nft canister id in step 3"; "your control canister id in step 3")'
+
+dfx canister call betalk addMiningSite '("Jakarta", "Velo", 0.04,4.0,4000,"ajuq4-ruaaa-aaaaa-qaaga-cai", "aovwi-4maaa-aaaaa-qaagq-cai")'
 
