@@ -49,17 +49,20 @@ dfx canister call lkrc mint '(record {
 
 ## 3. Deploy NFT then mine controller
 
-
+# deploy the NFT
 dfx deploy (nft name) --argument '(principal "your-minting-principal")'
 
-deploy controller
+# deploy controller
 dfx deploy (controller name) --argument '(record{admin = principal "your principal"})'
+
+# allow controller as NFT admin
+dfx canister call (nft name) setMinter '(principal "your controller id")'
 
 get your canister id
 dfx canister id nft
 dfx canister id controller
 
-##4. Register controller and NFT to main Loka
+## 4. Register controller and NFT to main Loka
 
 dfx canister call loka addMiningSite '(record{location_ = "Jakarta"; name_ = "Velo" ; elec_ = 2; thCost_ = 4; total_ = 4000; nftCan_ = "your nft canister id in step 4"; controlCan_ = "your control canister id in step 4"})'
 

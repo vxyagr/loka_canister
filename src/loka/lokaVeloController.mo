@@ -51,6 +51,10 @@ shared ({ caller = owner }) actor class VeloController({
     return "Hello, " # Principal.toText(message.caller) # "!1";
   };
 
+  public query (message) func getAdmin() : async Text {
+    return Principal.toText(siteAdmin);
+  };
+
   //get all contracts owned by caller address
   public query (message) func getOwnedContracts() : async [T.NFTContract]{
       let ownedContracts = Buffer.mapFilter<T.LokaNFT,T.NFTContract >(lokaNFTs, func (nft) {
@@ -155,18 +159,33 @@ public shared(message) func mintContract(miningSite : Nat, amount_: Nat, duratio
     miningRewards.add(miningRewards_);
     totalConsumedHashrate += hashrate_;
     let nftName = name # " " # Nat.toText(nftIndex);
-    let metadata_ :  T.Metadata = #nonfungible({name=nftName;
+
+    let receiver = Principal.toText(message.caller);
+    let mintRecord = (receiver, #nonfungible({name=nftName;
         asset="";
         thumbnail="";
         metadata=?#json("null");
-    });
-    let receiver = Principal.toText(message.caller);
-    let mintRecord = (receiver, metadata_);
+    }));
     let mintArgs = [mintRecord];
-   let mintResult = await VELONFT.ext_mint([receiver, metadata_ ]);  
+    let mintResult = await VELONFT.ext_mint(mintArgs);  
     nftIndex +=1;
     nftIndex-1;
   
+};
+
+public shared(message) func testMint() : async Nat {
+  assert(_isAdmin(message.caller));
+    let nftName = name # " " # Nat.toText(nftIndex);
+
+    let receiver = Principal.toText(message.caller);
+    let mintRecord = (receiver, #nonfungible({name=nftName;
+        asset="";
+        thumbnail="";
+        metadata=?#json("null");
+    }));
+    let mintArgs = [mintRecord];
+    let mintResult = await VELONFT.ext_mint(mintArgs);  
+    1;
 };
 
 
