@@ -152,17 +152,17 @@ shared ({ caller = owner }) actor class VeloController({
       case (24) 100;
       case _ 0;  
     };
-    Debug.print("calculate");
-    Debug.print("ROI "#Nat.toText(durationROIFactor));
+    //Debug.print("calculate");
+    //Debug.print("ROI "#Nat.toText(durationROIFactor));
     let dRFFloat_ = natToFloat(durationROIFactor);
     let durationFloat_ = natToFloat(duration_);
     let sats2Years = base2YearsTHperDay * satsPerHashDay * (28*24);
     let baseUSDProfit = sats2Years * satsUSD - amountFloat_;
     let baseMonthlyUSDProfit = baseUSDProfit / 24;
-    Debug.print("Profit "#Float.toText(baseMonthlyUSDProfit));
+    //Debug.print("Profit "#Float.toText(baseMonthlyUSDProfit));
     let finalSats =
         ((dRFFloat_/ 100) * baseMonthlyUSDProfit * durationFloat_ + amountFloat_) / satsUSD;
-    Debug.print("Final sats "#Float.toText(finalSats));
+    //Debug.print("Final sats "#Float.toText(finalSats));
     let thRented : Float = finalSats / (durationFloat_ * 28) / satsPerHashDay;
 
     return thRented;
@@ -194,7 +194,7 @@ shared ({ caller = owner }) actor class VeloController({
   };
 
   //the main function of this canister, minting a mining contract
-  public shared(message) func mintContract(miningSite : Nat, amount_: Nat, duration_: Nat, durationText_ : Text, genesis_ : Nat, start_ : Nat, end_ : Nat, satsUSD : Float) : async Nat {
+  public shared(message) func mintContract(amount_: Nat, duration_: Nat, durationText_ : Text, genesis_ : Nat, start_ : Nat, end_ : Nat, satsUSD : Float) : async Nat {
   
       
       let calculatedHashrate = calculateHashrate(amount_, duration_, satsUSD);
@@ -237,6 +237,7 @@ shared ({ caller = owner }) actor class VeloController({
       let nftName = name # " " # Nat.toText(nftIndex);
 
       let receiver = Principal.toText(message.caller);
+      //Debug.print("minting to  "#receiver);
       let mintRecord = (receiver, #nonfungible({name=nftName;
           asset="";
           thumbnail="";
@@ -244,18 +245,20 @@ shared ({ caller = owner }) actor class VeloController({
       }));
       let mintArgs = [mintRecord];
       let mintResult = await VELONFT.ext_mint(mintArgs);  
+      //Debug.print("minted "#Nat.toText(Array.size(mintResult)));
       nftIndex +=1;
       nftIndex-1;
     
   };
 
   //will be deleted
-  /*
+  
   public shared(message) func testMint(owner_ : Principal) : async Nat {
     assert(_isAdmin(message.caller));
       let nftName = name # " " # Nat.toText(nftIndex);
 
       let receiver = Principal.toText(owner_);
+      //Debug.print("minting to  "#receiver);
       let mintRecord = (receiver, #nonfungible({name=nftName;
           asset="";
           thumbnail="";
@@ -265,7 +268,7 @@ shared ({ caller = owner }) actor class VeloController({
       let mintResult = await VELONFT.ext_mint(mintArgs);  
       1;
   };
-  */
+  
 
 
   //being called by site admin only, to distribute ckBTC every certain period
