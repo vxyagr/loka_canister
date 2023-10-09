@@ -46,7 +46,7 @@ let overrides = [
     },
     {
        name = "base",
-       version = "moc-0.7.4",
+       version = "moc-0.9.7",
        repo = "https://github.com/dfinity/motoko-base",
        dependencies = ["base"] : List Text
     },

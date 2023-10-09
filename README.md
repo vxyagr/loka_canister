@@ -13,10 +13,10 @@ Local deployment :
 make sure you have installed npm, nodejs, and ICP Motoko SDK
 
 
-##1. Deploy main loka canister
+## 1. Deploy main loka canister
 dfx deploy loka --argument '(record{admin = principal "your principal"})'
-
-##2. Deploy ICRCs
+dfx deploy betalk --argument '(record{admin = principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe"})'
+## 2. Deploy ICRCs
 
 deploy tokens (there are 3 ICRCS, this one is example) :
 dfx deploy lkrc --argument '( record {                     
@@ -47,19 +47,30 @@ dfx canister call lkrc mint '(record {
 },)'
 
 
-##3. Deploy NFT then mine controller
+## 3. Deploy NFT then mine controller
 
-
+# deploy the NFT
 dfx deploy (nft name) --argument '(principal "your-minting-principal")'
+dfx deploy velonft --argument '(principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe")'
 
-deploy controller
-dfx deploy (controller name) --argument '(record{admin = principal "your principal"})'
+# deploy controller
+dfx deploy velo --argument '(record{admin = principal "your principal id";hashrate=0.035; electricity = 0.03; miningSiteIdparam = 1 ; siteName = "Velo"; totalHashrate =4000.0 ;})' 
+
+dfx deploy velo --argument '(record{admin = principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe";hashrate=0.035; electricity = 0.035; miningSiteIdparam = 1 ; siteName = "Velo"; totalHashrate =4000.0 ;})'
 
 get your canister id
 dfx canister id nft
 dfx canister id controller
 
-##4. Register controller and NFT to main Loka
+# allow controller as NFT admin
+dfx canister call (nft name) setMinter '(principal "your controller id")'
 
-dfx canister call loka addMiningSite '(record{location_ = "Jakarta"; name_ = "Velo" ; elec_ = 2; thCost_ = 4; total_ = 4000; nftCan_ = "your nft canister id in step 4"; controlCan_ = "your control canister id in step 4"})'
+dfx canister call velonft setMinter '(principal "ctiya-peaaa-aaaaa-qaaja-cai")'
+
+## 4. Register controller and NFT to main Loka
+eg :
+
+dfx canister call loka addMiningSite '("Location", "Name" ,electricityCost; thCost; total_ = 4000; "your nft canister id in step 3"; "your control canister id in step 3")'
+like this
+dfx canister call betalk addMiningSite '("Jakarta", "Velo", 0.035,0.035,4000,"cuj6u-c4aaa-aaaaa-qaajq-cai", "ctiya-peaaa-aaaaa-qaaja-cai")'
 
