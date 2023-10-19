@@ -237,7 +237,7 @@ shared ({ caller = owner }) actor class VeloController({
       let nftName = name # " " # Nat.toText(nftIndex);
 
       let receiver = Principal.toText(message.caller);
-      //Debug.print("minting to  "#receiver);
+      Debug.print("minting to  "#receiver);
       let mintRecord = (receiver, #nonfungible({name=nftName;
           asset="";
           thumbnail="";
@@ -328,7 +328,7 @@ shared ({ caller = owner }) actor class VeloController({
     let amount64_ = Int64.toNat64(amt64);
     let amount_ : T.Balance = Nat64.toNat(amount64_);
     if (amount_<=0 or owner_!=caller_) {
-      0
+      1
     }else{
     let transferResult = await LBTC.icrc1_transfer({
       amount = amount_;
@@ -344,9 +344,24 @@ shared ({ caller = owner }) actor class VeloController({
         miningReward_.claimableBTC := 0;
         miningReward_.claimedBTC +=temp;
         miningRewards.put(id_,miningReward_);
-        res :=1;
+        res :=2;
       };
-      case (#Err(msg)) {res:=0;};
+      case (#Err(msg)) {
+        //let ms : Text  = msg;
+        Debug.print("transfer error  ");
+        switch (msg){
+          case (#BadFee(number)){
+            Debug.print("Bad Fee");
+          };
+          case (#GenericError(number)){
+            Debug.print("err "#number.message);
+          };
+          case (#InsufficientFunds(number)){
+            Debug.print("insufficient funds");
+          };
+        };
+        res:=0;
+        };
     };
     
     res;
