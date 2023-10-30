@@ -1,4 +1,5 @@
 import Time "mo:base/Time";
+//import Principal "motoko/util/Principal";
 
 
 module {
@@ -10,7 +11,7 @@ module {
     public type TransactionHistory = {
         id: Nat;
         caller: Text;
-        time : Nat;
+        time : Time.Time;
         action: Text;
         amount: Nat;
     };
@@ -33,14 +34,16 @@ module {
         created_at_time : ?Nat64;
     };
 
+    public type Duration = {#seconds : Nat; #nanoseconds : Nat};
+
     public type NFTContract = {
         id : Nat;
         amount : Nat;
         duration : Nat;
         durationText : Text;
         hashrate : Float;
-        start : Nat;
-        end : Nat;
+        start : Int;
+        end : Int;
         electricityPerDay : Float;
         claimedLOM : Float;
         claimedBTC : Float;
@@ -49,8 +52,9 @@ module {
         LETBalance : Float;
         owner : Text;
         metadata : Text;
-        daysLeft : Nat;
+        daysLeft : Int;
         miningSite : Nat;
+        //canister : Principal;
     };
 
     
@@ -77,8 +81,8 @@ module {
         duration: Nat;      
         hashrate : Float;     
         genesisId: Nat;
-        start: Nat;
-        end : Nat;
+        start: Int;
+        end : Int;
         electricityPerDay: Float;       
 
     };
@@ -97,12 +101,14 @@ module {
         var claimedBTC : Float;
         var claimableLOM : Float;
         var claimedLOM : Float;
-        var daysLeft : Nat;
+        var daysLeft : Int;
         hashrate : Float;
         var LETBalance : Float;
         electricityPerDay: Float;
         var staked : Bool;
         var stakeTime : Nat;
+        start : Int;
+        end : Int;
     };
 
     public type Genesis = {
