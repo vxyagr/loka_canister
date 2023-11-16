@@ -19,48 +19,60 @@ dfx deploy betalk --argument '(record{admin = principal "rlea3-jid2o-qrpi6-w72yb
 ## 2. Deploy ICRCs
 
 deploy tokens (there are 3 ICRCS, this one is example) :
-dfx deploy lbtc --argument '( record {                     
-      name = "LBTC";                         
-      symbol = "LBTC";                           
-      decimals = 6;                                           
-      fee = 0;                                        
-      max_supply = 1_000_000_000_000;                         
-      initial_balances = vec {                                
-          record {                                            
-              record {                                        
-                  owner = principal "rlea3-jid2o-qrpi6-w72yb-pf24t-dd6vc-6du7b-r4lnm-sccfm-mhkhu-sae";   
-                  subaccount = null;                          
-              };                                              
-              100_000_000                                 
-          }                                                   
-      };                                                      
-      min_burn_amount = 10_000;                         
-      minting_account = null;                                 
-      advanced_settings = null;                               
-  })'
+dfx deploy lbtc  --argument "(variant {Init = 
+record {
+     token_symbol = \"LBTC\";
+     token_name = \"LBTC\";
+     minting_account = record { owner = principal \"${MINTER}\" };
+     transfer_fee = 0;
+     metadata = vec {};
+     feature_flags = opt record{icrc2 = true};
+     initial_balances = vec { record { record { owner = principal \"${MINTER}\"; }; 1000000000000; }; };
+     archive_options = record {
+         num_blocks_to_archive = 1000;
+         trigger_threshold = 2000;
+         controller_id = principal \"${MINTER}\";
+         cycles_for_archive_creation = opt 10000000000000;
+     };
+ }
+})"
 
-  dfx deploy lklm --argument '( record {                     
-      name = "LKLM";                         
-      symbol = "LKLM";                           
-      decimals = 6;                                           
-      fee = 0;                                        
-      max_supply = 1_000_000_000_000;                         
-      initial_balances = vec {                                
-          record {                                            
-              record {                                        
-                  owner = principal "rlea3-jid2o-qrpi6-w72yb-pf24t-dd6vc-6du7b-r4lnm-sccfm-mhkhu-sae";   
-                  subaccount = null;                          
-              };                                              
-              100_000_000                                 
-          }                                                   
-      };                                                      
-      min_burn_amount = 10_000;                         
-      minting_account = null;                                 
-      advanced_settings = null;                               
-  })'
+dfx deploy lklm  --argument "(variant {Init = 
+record {
+     token_symbol = \"LKLM\";
+     token_name = \"LKLM\";
+     minting_account = record { owner = principal \"${MINTER}\" };
+     transfer_fee = 0;
+     metadata = vec {};
+     feature_flags = opt record{icrc2 = true};
+     initial_balances = vec { record { record { owner = principal \"${MINTER}\"; }; 1000000000000; }; };
+     archive_options = record {
+         num_blocks_to_archive = 1000;
+         trigger_threshold = 2000;
+         controller_id = principal \"${MINTER}\";
+         cycles_for_archive_creation = opt 10000000000000;
+     };
+ }
+})"
 
 
-
+dfx deploy lkrc  --argument "(variant {Init = 
+record {
+     token_symbol = \"LKRC\";
+     token_name = \"LKRC\";
+     minting_account = record { owner = principal \"${MINTER}\" };
+     transfer_fee = 0;
+     metadata = vec {};
+     feature_flags = opt record{icrc2 = true};
+     initial_balances = vec { record { record { owner = principal \"${MINTER}\"; }; 1000000000000; }; };
+     archive_options = record {
+         num_blocks_to_archive = 1000;
+         trigger_threshold = 2000;
+         controller_id = principal \"${MINTER}\";
+         cycles_for_archive_creation = opt 10000000000000;
+     };
+ }
+})"
 
 ## 3. Deploy NFT then mine controller
 
