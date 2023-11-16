@@ -107,6 +107,7 @@ module {
         electricityPerDay: Float;
         var staked : Bool;
         var stakeTime : Nat;
+        var firstDay : Bool;
         start : Int;
         end : Int;
     };

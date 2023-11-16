@@ -1,12 +1,18 @@
 {
   "betalk": {
-    "ic": "af353-wyaaa-aaaak-qcmtq-cai"
+    "ic": "l4mjr-aiaaa-aaaak-qcnmq-cai"
   },
   "lbtc": {
-    "ic": "alzqt-niaaa-aaaak-qcmsq-cai"
+    "ic": "lhjvu-2qaaa-aaaak-qcnoa-cai"
   },
   "lklm": {
-    "ic": "ac23p-3aaaa-aaaak-qcmta-cai"
+    "ic": "laita-xiaaa-aaaak-qcnoq-cai"
   },
-  "lkrc": {}
+  "lkrc": {},
+  "velo": {
+    "ic": "lsoez-3yaaa-aaaak-qcnnq-cai"
+  },
+  "velonft": {
+    "ic": "lvpcn-waaaa-aaaak-qcnna-cai"
+  }
 }

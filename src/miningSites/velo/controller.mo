@@ -15,22 +15,26 @@ import Hash "mo:base/Hash";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Result "mo:base/Result";
+import { now } = "mo:base/Time";
+import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
+import { abs } = "mo:base/Int";
 
+//@dev canister dependencies
 //import LKRC "canister:lkrc";
 import LBTC "canister:lbtc";
 import LKLM "canister:lklm";
 import VELONFT "canister:velonft";
 
 
-import T "types";
-import IT "icrcTypes"
+import T "../types";
+
 
 
 shared ({ caller = owner }) actor class VeloController({
-  admin: Principal; hashrate : Float; electricity : Float; miningSiteIdparam : Nat ; siteName : Text; totalHashrate : Float; }) {
+  admin: Principal; hashrate : Float; electricity : Float; miningSiteIdparam : Nat ; siteName : Text; totalHashrate : Float; }) =this{
 
 
-  //mining site data
+//@dev mining site data
   private var name = siteName;
   private var miningSiteId = miningSiteIdparam;
   private var electricityPrice = electricity; // $ per kwh
@@ -39,21 +43,28 @@ shared ({ caller = owner }) actor class VeloController({
   //private var hardwareEfficiency = hardwareEfficiency_;
   private var hardwareEfficiency = 38.0;
   private var synced = 0;
-
-
-
+  private var lastBTCDistribution = Time.now();
+  private var lastLOMDistribution = Time.now();
   private var siteAdmin : Principal = admin;
   private var paused : Bool = false;
   private var nftIndex = 0;
-  private var totalConsumedHashrate = 0.0;
+  private var totalConsumedHashrate = 0.0; // current rented hashrate
+  private var lastCalled_ = 0;
+  private var lastDistribution_ = 0;
   
 
-  let miningContracts = Buffer.Buffer<T.MiningContract>(0); 
+  var miningContracts = Buffer.Buffer<T.MiningContract>(0); 
   let miningRewards = Buffer.Buffer<T.MiningReward>(0); 
   let lokaNFTs = Buffer.Buffer<T.LokaNFT>(0); 
   let miningSites = Buffer.Buffer<T.MiningSite>(0);
+  let history = Buffer.Buffer<T.TransactionHistory>(0);
 
-// ASSERTS
+//@dev timers
+   var dailyDistribution = ignore recurringTimer(#seconds (10),  func () : async () {
+      Debug.print("Timer log");
+  });
+
+// @dev ASSERTS
   func _isAdmin(p : Principal) : Bool {
       return (p == siteAdmin);
     };
@@ -61,13 +72,15 @@ shared ({ caller = owner }) actor class VeloController({
       return paused;
     };
     
-// GETTERS and CALCULATORS
-  //get this canisters admin
+// @dev GETTERS and CALCULATORS================================================================
+  // @dev get this canisters admin
   public query (message) func getAdmin() : async Text {
     return Principal.toText(siteAdmin);
   };
-
-  //get all contracts owned by caller address
+  private func idQuick() : async Principal {
+    return Principal.fromActor(this);
+  }; 
+  //@dev get all contracts owned by caller address
   public query (message) func getOwnedContracts() : async [T.NFTContract]{
       let ownedContracts = Buffer.mapFilter<T.LokaNFT,T.NFTContract >(lokaNFTs, func (nft) {
         if (nft.owner==Principal.toText(message.caller)) {
@@ -94,6 +107,7 @@ shared ({ caller = owner }) actor class VeloController({
             metadata = nft.metadata;
             daysLeft = miningRewards.get(nft.id).daysLeft;
             miningSite = miningSiteId;
+           // canister = idQuick;
           };
           ?nftContract;
         } else {
@@ -104,7 +118,7 @@ shared ({ caller = owner }) actor class VeloController({
       Buffer.toArray<T.NFTContract>(ownedContracts);
   };
 
-  //get an NFT mining contract by contract ID
+  //@dev get an NFT mining contract by contract ID
   public query (message) func getNFTContract(id_ : Nat) : async T.NFTContract{
       let nft = lokaNFTs.get(id_);
       let nftContract : T.NFTContract = {
@@ -129,9 +143,9 @@ shared ({ caller = owner }) actor class VeloController({
 
       nftContract;
   };
+ 
 
-
-  //helper function, should have been separated in another .mo but well im busy
+  //@dev helper function, should have been separated in another .mo
   private func natToFloat (nat_ : Nat ) : Float {
     let toNat64_ = Nat64.fromNat(nat_);
     let toInt64_ = Int64.fromNat64(toNat64_);
@@ -139,7 +153,14 @@ shared ({ caller = owner }) actor class VeloController({
     return amountFloat_;
   };
 
-  //calculate how much TH/s or hashrate given the amount and duration of mining
+   private func natToInt (nat_ : Nat ) : Int {
+    let toNat64_ = Nat64.fromNat(nat_);
+    let toInt64_ = Int64.fromNat64(toNat64_);
+    let amountInt_ = Int64.toInt(toInt64_);
+    return amountInt_;
+  };
+
+  //@dev calculate how much TH/s or hashrate given the amount and duration of mining
   private func calculateHashrate(amount_ : Nat, duration_ : Nat, satsUSD : Float) : Float{
 
     let satsPerHashDay : Float = 240.0;
@@ -168,17 +189,44 @@ shared ({ caller = owner }) actor class VeloController({
     return thRented;
   };
 
-  //calculate how much electricity cost per day given the hashrate usage
+  //@dev calculate how much electricity cost per day given the hashrate usage
   private func calculateElectricityConsumptionPerDay(th_ : Float) : Float{
     let electricityCostPerDay = ((th_ * hardwareEfficiency *24)/1000) * electricityPrice;
     return electricityCostPerDay;
   };
 
 
-//SETTERS / UPDATE / MINTER and CLAIM FUNCTIONS
+//@dev calculate total time of all mining contract, as there are new contracts which aged less than 24 hours, returns total seconds
+  private func calculateTotalTime() : Float{
+    var totalTime = 0;
+    let daySeconds = 24*60*60;
+     Buffer.iterate<T.MiningReward>(miningRewards, func (rewards) {
+      if(rewards.firstDay){
+        rewards.firstDay:=false;
+        var seconds_ = now()-rewards.start;
+      }else{
+        totalTime += daySeconds;
+      }
+    });
+    return 1.0;
+  };
+  
+
+  public shared(message) func lastCalled() : async Int{
+
+    var now_ = abs(now() / 1_000_000_000);
+    var last_ = now_ - lastCalled_;
+    Debug.print("now "#Int.toText(now_));
+    Debug.print("lastCalled_ "#Int.toText(lastCalled_));
+    lastCalled_ := now_ + 0;
+
+    return last_;
+  };
+
+//@dev SETTERS / UPDATE / MINTER and CLAIM FUNCTIONS========================================================================
 
 
-  //a function to synchronize NFT owner and mining contract owner, should be called automatically every 24 hrs
+  //@dev a function to synchronize NFT owner and mining contract owner, should be called automatically every 24 hrs
   public shared(message) func syncOwner() : async Nat {
     assert(_isAdmin(message.caller));
     return 1
@@ -193,13 +241,17 @@ shared ({ caller = owner }) actor class VeloController({
     return 1
   };
 
-  //the main function of this canister, minting a mining contract
-  public shared(message) func mintContract(amount_: Nat, duration_: Nat, durationText_ : Text, genesis_ : Nat, start_ : Nat, end_ : Nat, satsUSD : Float) : async Nat {
+  //@dev the main function of this canister, minting a mining contract
+  public shared(message) func mintContract(amount_: Nat, duration_: Nat, durationText_ : Text, genesis_ : Nat, satsUSD : Float) : async Nat {
   
       
       let calculatedHashrate = calculateHashrate(amount_, duration_, satsUSD);
       let calculatedElectricityerDay = calculateElectricityConsumptionPerDay(calculatedHashrate);
-
+      let start_ = Time.now();
+      let end_ = start_ + 1000000000 * 60 * 60 * 24 * 28;
+      let drInt = natToInt(duration_) * 28;
+      let duration : T.Duration = #seconds (duration_);
+      //let endTime = Time.now() + (#seconds (drInt));
       let miningContract_ : T.MiningContract = {
         id = nftIndex;
         amount = amount_;
@@ -229,6 +281,9 @@ shared ({ caller = owner }) actor class VeloController({
         var stakeTime = 0;
         electricityPerDay = calculatedElectricityerDay;
         hashrate = calculatedHashrate;
+        end = end_;
+        start = start_;
+        var firstDay = true;
         };
       miningContracts.add(miningContract_);
       lokaNFTs.add(lokaNFTs_);
@@ -237,7 +292,7 @@ shared ({ caller = owner }) actor class VeloController({
       let nftName = name # " " # Nat.toText(nftIndex);
 
       let receiver = Principal.toText(message.caller);
-      //Debug.print("minting to  "#receiver);
+      Debug.print("minting to  "#receiver);
       let mintRecord = (receiver, #nonfungible({name=nftName;
           asset="";
           thumbnail="";
@@ -251,35 +306,22 @@ shared ({ caller = owner }) actor class VeloController({
     
   };
 
-  //will be deleted
-  
-  public shared(message) func testMint(owner_ : Principal) : async Nat {
-    assert(_isAdmin(message.caller));
-      let nftName = name # " " # Nat.toText(nftIndex);
-
-      let receiver = Principal.toText(owner_);
-      //Debug.print("minting to  "#receiver);
-      let mintRecord = (receiver, #nonfungible({name=nftName;
-          asset="";
-          thumbnail="";
-          metadata=?#json("null");
-      }));
-      let mintArgs = [mintRecord];
-      let mintResult = await VELONFT.ext_mint(mintArgs);  
-      1;
-  };
-  
 
 
-  //being called by site admin only, to distribute ckBTC every certain period
-  public shared(message) func distributeBTC(amount_ : Float, satsUsd : Float) : async Float {
+
+  //@dev being called by site admin only, to distribute ckBTC every certain period
+  public shared(message) func distributeBTC(amount_ : Float, satsUsd : Float) : async() {
     //assert(_isAdmin(message.caller));
     let satsPerHashrate = amount_ / totalConsumedHashrate;
     var releasedHashrate = 0.0;
+    var now_ = Time.now();
+
+    let totalTime = calculateTotalTime();
+
     Buffer.iterate<T.MiningReward>(miningRewards, func (rewards) {
       if(rewards.daysLeft > 0){
-      
-        let remaining = rewards.daysLeft-1;
+        /*if(rewards.start)
+        let remaining = (rewards.end-now_)/(1000000000*60*60*24);
         var btcReward = rewards.hashrate*satsPerHashrate; 
 
         if(rewards.LETBalance > rewards.electricityPerDay){
@@ -289,14 +331,15 @@ shared ({ caller = owner }) actor class VeloController({
         };
         rewards.claimableBTC += Float.floor(rewards.hashrate*satsPerHashrate); 
         if(remaining==0)releasedHashrate+=rewards.hashrate;
-        rewards.daysLeft -=1;
+        rewards.daysLeft := remaining; */
       }
     });
+    lastBTCDistribution := now_;
 
-    amount_
+
   };
 
-  //being called by site admin only, to distribute LOM native token every certain period
+  //@dev being called by site admin only, to distribute LOM native token every certain period
   public shared(message) func distributeLOM(amount_ : Float) : async Float {
     //assert(_isAdmin(message.caller));
     let satsPerHashrate = amount_ / totalConsumedHashrate;
@@ -316,7 +359,7 @@ shared ({ caller = owner }) actor class VeloController({
 
 
 
-  //being called by end user / retail from web, to claim ckBTC to their wallet
+  //@dev being called by end user / retail from web, to claim ckBTC to their wallet
   public shared(message) func claimBTC(id_ : Nat) : async Nat {
 
     let to_ : T.Account = {owner=message.caller};
@@ -328,8 +371,9 @@ shared ({ caller = owner }) actor class VeloController({
     let amount64_ = Int64.toNat64(amt64);
     let amount_ : T.Balance = Nat64.toNat(amount64_);
     if (amount_<=0 or owner_!=caller_) {
-      0
+      1
     }else{
+      Debug.print("Claiming BTC by "#caller_);
     let transferResult = await LBTC.icrc1_transfer({
       amount = amount_;
       fee = null;
@@ -344,16 +388,34 @@ shared ({ caller = owner }) actor class VeloController({
         miningReward_.claimableBTC := 0;
         miningReward_.claimedBTC +=temp;
         miningRewards.put(id_,miningReward_);
-        res :=1;
+        res :=2;
       };
-      case (#Err(msg)) {res:=0;};
+      case (#Err(msg)) {
+
+        Debug.print("transfer error  ");
+        switch (msg){
+          case (#BadFee(number)){
+            Debug.print("Bad Fee");
+          };
+          case (#GenericError(number)){
+            Debug.print("err "#number.message);
+          };
+          case (#InsufficientFunds(number)){
+            Debug.print("insufficient funds");
+          };
+          case _ {
+            Debug.print("err");
+          }
+        };
+        res:=0;
+        };
     };
     
     res;
     }
   };
 
-  //being called by end user / retail from web, to claim LOM to their wallet
+  //@dev being called by end user / retail from web, to claim LOM to their wallet
   public shared(message) func claimLOM(id_ : Nat) : async Nat {
     let to_ : T.Account = {owner=message.caller};
     var miningReward_ : T.MiningReward = miningRewards.get(id_);
@@ -392,13 +454,78 @@ shared ({ caller = owner }) actor class VeloController({
     
   };
 
-  //pause / resume contract by setting paused  variable value
+
+  //@dev stake / unstake NFT
+  public shared(message) func stakeNFT(id_ : Nat) : async Nat {
+    let to_ : T.Account = {owner=message.caller};
+    var miningReward_ : T.MiningReward = miningRewards.get(id_);
+    var owner_ = lokaNFTs.get(id_).owner;
+    var caller_ = Principal.toText(message.caller);
+    let temp = miningReward_.claimableLOM;
+    let amt64 = Float.toInt64(miningReward_.claimableBTC);
+    let amount64_ = Int64.toNat64(amt64);
+    let amount_ : T.Balance = Nat64.toNat(amount64_);
+
+    if (amount_<=0 or owner_!=caller_) {
+      0
+    }else{
+    let transferResult = await LKLM.icrc1_transfer({
+      amount = amount_;
+      fee = null;
+      created_at_time = null;
+      from_subaccount=null;
+      to = {owner=message.caller; subaccount=null};
+      memo = null;
+    });
+    var res = 0;
+    switch (transferResult)  {
+      case (#Ok(number)) {
+        miningReward_.claimableLOM := 0;
+        miningReward_.claimedLOM +=temp;
+        miningRewards.put(id_,miningReward_);
+        res :=1;
+      };
+      case (#Err(msg)) {res:=0;};
+    };
+
+  
+    res;
+    }
+    
+  };
+
+  //@dev pause / resume contract by setting paused  variable value
   public shared(message) func pauseContract(pause_ : Bool) : async Bool {
     assert(_isAdmin(message.caller));
     //for as many as NFTs, loop, share as per hashrate
     let paused = pause_;
     pause_
   };
+
+
+  public shared(message) func startDistributionTimer() : async () {
+    //cancelTimer(dailyDistribution);
+    assert(_isAdmin(message.caller));
+    dailyDistribution := ignore recurringTimer(#seconds (5),  func () : async () {
+      Debug.print("Timer log edited");
+  });
+
+  };
+
+  
+
+  public shared(message) func scheduledDistribution () : async () {
+    let acc : T.Account = {owner=Principal.fromActor(this);subaccount=?null};
+    let ckBTCBalance = await LBTC.icrc1_balance_of({owner=Principal.fromActor(this);subaccount=null});
+    let res = distributeBTC(natToFloat(ckBTCBalance),0.0);
+    let current = now();
+    Debug.print("distribution executed at "#Int.toText(current));
+
+   };
+
+   public shared(message) func autoMintckBTC() : async () {
+    
+   }
     
 };
 

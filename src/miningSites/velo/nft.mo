@@ -19,18 +19,18 @@ import Time "mo:base/Time";
 import Random "mo:base/Random";
 import Array "mo:base/Array";
 import Option "mo:base/Option";
-import AID "../motoko/util/AccountIdentifier";
-import ExtCore "../motoko/ext/Core";
-import ExtCommon "../motoko/ext/Common";
-import ExtAllowance "../motoko/ext/Allowance";
-import ExtNonFungible "../motoko/ext/NonFungible";
+import AID "../../motoko/util/AccountIdentifier";
+import ExtCore "../../motoko/ext/Core";
+import ExtCommon "../../motoko/ext/Common";
+import ExtAllowance "../../motoko/ext/Allowance";
+import ExtNonFungible "../../motoko/ext/NonFungible";
 //EXTv2 SALE
 import Int64 "mo:base/Int64";
 import List "mo:base/List";
 import Encoding "mo:encoding/Binary";
 //Cap
 import Cap "mo:cap/Cap";
-import Queue "../motoko/util/Queue";
+import Queue "../../motoko/util/Queue";
 import EXTAsset "extAsset";
 
 actor class EXTNFT(init_owner: Principal) = this {
