@@ -506,9 +506,11 @@ shared ({ caller = owner }) actor class VeloController({
   public shared(message) func startDistributionTimer() : async () {
     //cancelTimer(dailyDistribution);
     assert(_isAdmin(message.caller));
-    dailyDistribution := ignore recurringTimer(#seconds (5),  func () : async () {
-      Debug.print("Timer log edited");
+    dailyDistribution := ignore recurringTimer(#seconds (24*60*60),  func () : async () {
+      let distribute = scheduledDistribution() ;
+      
   });
+  Debug.print("distribution timer started");
 
   };
 

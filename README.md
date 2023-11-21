@@ -16,6 +16,8 @@ make sure you have installed npm, nodejs, and ICP Motoko SDK
 ## 1. Deploy main loka canister
 dfx deploy loka --argument '(record{admin = principal "your principal"})'
 dfx deploy betalk --argument '(record{admin = principal "rlea3-jid2o-qrpi6-w72yb-pf24t-dd6vc-6du7b-r4lnm-sccfm-mhkhu-sae"})'
+
+dfx deploy miner --argument '(record{admin = principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe"})' 
 ## 2. Deploy ICRCs
 
 deploy tokens (there are 3 ICRCS, this one is example) :
@@ -74,11 +76,31 @@ record {
  }
 })"
 
+
+
+dfx deploy ckbtc  --argument "(variant {Init = 
+record {
+     token_symbol = \"CKBTC\";
+     token_name = \"CKBTC\";
+     minting_account = record { owner = principal \"${MINTER}\" };
+     transfer_fee = 0;
+     metadata = vec {};
+     feature_flags = opt record{icrc2 = true};
+     initial_balances = vec { record { record { owner = principal \"${MINTER}\"; }; 1000000000000; }; };
+     archive_options = record {
+         num_blocks_to_archive = 1000;
+         trigger_threshold = 2000;
+         controller_id = principal \"${MINTER}\";
+         cycles_for_archive_creation = opt 10000000000000;
+     };
+ }
+})"
+
 ## 3. Deploy NFT then mine controller
 
 # deploy the NFT
 dfx deploy (nft name) --argument '(principal "your-minting-principal")'
-dfx deploy velonft --argument '(principal "rlea3-jid2o-qrpi6-w72yb-pf24t-dd6vc-6du7b-r4lnm-sccfm-mhkhu-sae")'
+dfx deploy velonft --argument '(principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe")'
 
 # deploy controller
 dfx deploy velo --argument '(record{admin = principal "your principal id";hashrate=0.035; electricity = 0.03; miningSiteIdparam = 1 ; siteName = "Velo"; totalHashrate =4000.0 ;})' 
