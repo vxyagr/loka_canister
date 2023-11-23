@@ -36,6 +36,16 @@ module {
         hashrate : Nat;
      };
 
+    public type MinerData = {
+        id : Nat;
+        walletAddress : Principal;
+        walletAddressText : Text;
+        username : Text;
+        hashrate : Nat;
+        verified : Bool;
+        lastCheckedBalance : Float;
+        totalWithdrawn : Float;
+     };
 
      public type Timestamp = Nat64;
   

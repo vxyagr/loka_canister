@@ -78,7 +78,7 @@ record {
 
 
 
-dfx deploy ckbtc  --argument "(variant {Init = 
+dfx deploy ckbtc_ledger  --argument "(variant {Init = 
 record {
      token_symbol = \"CKBTC\";
      token_name = \"CKBTC\";
