@@ -15,6 +15,7 @@ import Hash "mo:base/Hash";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Result "mo:base/Result";
+import Char "mo:base/Char";
 import { now } = "mo:base/Time";
 import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
 import { abs } = "mo:base/Int";
@@ -195,6 +196,20 @@ shared ({ caller = owner }) actor class VeloController({
     return electricityCostPerDay;
   };
 
+func intToNat( int_ : Int) : Nat {
+        let txt = Int.toText(int_);
+        assert(txt.size() > 0);
+        let chars = txt.chars();
+
+        var num : Nat = 0;
+        for (v in chars){
+            let charToNum = Nat32.toNat(Char.toNat32(v)-48);
+            assert(charToNum >= 0 and charToNum <= 9);
+            num := num * 10 +  charToNum;          
+        };
+
+        num;
+    };
 
 //@dev calculate total time of all mining contract, as there are new contracts which aged less than 24 hours, returns total seconds
   private func calculateTotalTime() : Float{
@@ -204,11 +219,12 @@ shared ({ caller = owner }) actor class VeloController({
       if(rewards.firstDay){
         rewards.firstDay:=false;
         var seconds_ = now()-rewards.start;
+        totalTime +=intToNat(seconds_);
       }else{
         totalTime += daySeconds;
       }
     });
-    return 1.0;
+    return natToFloat(totalTime);
   };
   
 
@@ -317,12 +333,16 @@ shared ({ caller = owner }) actor class VeloController({
     var now_ = Time.now();
 
     let totalTime = calculateTotalTime();
-
+    
     Buffer.iterate<T.MiningReward>(miningRewards, func (rewards) {
       if(rewards.daysLeft > 0){
+        var stakeSecond = natToFloat(intToNat(now_ - rewards.start));
+         let stakeTimeProportion = stakeSecond / totalTime;
+        let  hashProportion = rewards.hashrate / totalHashrate;
+        var btcReward = amount_ *(stakeTimeProportion*hashProportion); 
         /*if(rewards.start)
         let remaining = (rewards.end-now_)/(1000000000*60*60*24);
-        var btcReward = rewards.hashrate*satsPerHashrate; 
+        
 
         if(rewards.LETBalance > rewards.electricityPerDay){
           rewards.LETBalance -= rewards.electricityPerDay;
@@ -506,9 +526,11 @@ shared ({ caller = owner }) actor class VeloController({
   public shared(message) func startDistributionTimer() : async () {
     //cancelTimer(dailyDistribution);
     assert(_isAdmin(message.caller));
-    dailyDistribution := ignore recurringTimer(#seconds (5),  func () : async () {
-      Debug.print("Timer log edited");
+    dailyDistribution := ignore recurringTimer(#seconds (24*60*60),  func () : async () {
+      let distribute = scheduledDistribution() ;
+      
   });
+  Debug.print("distribution timer started");
 
   };
 
