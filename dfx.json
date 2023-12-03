@@ -10,7 +10,7 @@
       "dependencies": ["ckbtc_ledger"]
     },
     "velo": {
-      "main": "src/miningSites/velo/controller.mo",
+      "main": "src/miningSites/site_1/controller.mo",
       "type": "motoko",
       "dependencies": [
         "lbtc",
@@ -19,7 +19,7 @@
     ]
     },
     "velonft": {
-      "main": "src/miningSites/velo/nft.mo",
+      "main": "src/miningSites/site_1/nft.mo",
       "type": "motoko"
     },
     "lbtc": {
@@ -51,7 +51,7 @@
   },
   "networks": {
     "local": {
-      "bind": "192.168.1.8:8000",
+      "bind": "192.168.56.103:8000",
       "type": "ephemeral"
     }
   },

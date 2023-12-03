@@ -248,14 +248,14 @@ func intToNat( int_ : Int) : Nat {
     return 1
   };
 
-  public shared(message) func manualSync() : async Nat {
+  /*public shared(message) func manualSync() : async Nat {
     /* backlog to do 8 Oct 2023
     //get list of NFTs owned by caller
     //check with controllers list of owner
     //if different, change to the latest NFT canister owner
     */
     return 1
-  };
+  }; */
 
   //@dev the main function of this canister, minting a mining contract
   public shared(message) func mintContract(amount_: Nat, duration_: Nat, durationText_ : Text, genesis_ : Nat, satsUSD : Float) : async Nat {
@@ -476,7 +476,7 @@ func intToNat( int_ : Int) : Nat {
 
 
   //@dev stake / unstake NFT
-  public shared(message) func stakeNFT(id_ : Nat) : async Nat {
+  public shared(message) func stakeNFT(id_ : Nat, stake_ : Bool) : async Bool {
     let to_ : T.Account = {owner=message.caller};
     var miningReward_ : T.MiningReward = miningRewards.get(id_);
     var owner_ = lokaNFTs.get(id_).owner;
@@ -486,34 +486,19 @@ func intToNat( int_ : Int) : Nat {
     let amount64_ = Int64.toNat64(amt64);
     let amount_ : T.Balance = Nat64.toNat(amount64_);
 
-    if (amount_<=0 or owner_!=caller_) {
-      0
-    }else{
-    let transferResult = await LKLM.icrc1_transfer({
-      amount = amount_;
-      fee = null;
-      created_at_time = null;
-      from_subaccount=null;
-      to = {owner=message.caller; subaccount=null};
-      memo = null;
-    });
-    var res = 0;
-    switch (transferResult)  {
-      case (#Ok(number)) {
-        miningReward_.claimableLOM := 0;
-        miningReward_.claimedLOM +=temp;
-        miningRewards.put(id_,miningReward_);
-        res :=1;
-      };
-      case (#Err(msg)) {res:=0;};
+    if(miningReward_.staked==false and stake_){
+      miningReward_.staked:=true;
+      miningReward_.stakeTime:=intToNat(now());
+    }else if(miningReward_.staked and stake_==false){
+      miningReward_.staked:=false;
     };
-
   
-    res;
-    }
+    miningReward_.staked;
+    
     
   };
 
+  
   //@dev pause / resume contract by setting paused  variable value
   public shared(message) func pauseContract(pause_ : Bool) : async Bool {
     assert(_isAdmin(message.caller));

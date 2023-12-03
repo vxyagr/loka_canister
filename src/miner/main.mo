@@ -28,19 +28,33 @@ shared ({ caller = owner }) actor class Miner({
   admin: Principal
 }) =this{
 
-  private var minersIndex = 0;
-  private var pause = false : Bool;
+  private stable var minersIndex = 0;
+  private stable var pause = false : Bool;
   private var totalConsumedHashrate = 0;
   private var siteAdmin : Principal = admin;
   private var dappsKey = "0xSet";
-  private var totalHashrate = 0;
+  private stable var totalHashrate = 0;
   private var totalBalance = 0.0005;
   private var totalWithdrawn = 0.0;
 
 
 
-  let minerStatus = Buffer.Buffer<T.MinerStatus>(0);
-  let miners = Buffer.Buffer<T.Miner>(0);
+  var minerStatus = Buffer.Buffer<T.MinerStatus>(0);
+  var miners = Buffer.Buffer<T.Miner>(0);
+  var minerStatus_ : [T.MinerStatus]= []; 
+  var miners_ : [T.Miner]= []; 
+  var minerRewards = Buffer.Buffer<T.MinerReward>(0);
+  var lokaCKBTCVault : Principal = admin; 
+  var f2poolKey : Text = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h";
+
+  system func preupgrade() {
+        miners_ := Buffer.toArray<T.Miner>(miners);
+        minerStatus_ := Buffer.toArray<T.MinerStatus>(minerStatus);
+  };
+  system func postupgrade() {
+        miners := Buffer.fromArray<T.Miner>(miners_); 
+        minerStatus:= Buffer.fromArray<(T.MinerStatus)>(minerStatus_);
+  };
 
   func _isAdmin(p : Principal) : Bool {
       return (p == siteAdmin);
@@ -58,6 +72,12 @@ shared ({ caller = owner }) actor class Miner({
   public query func isNotPaused(): async Bool {
     if(pause)return false;
     true;
+  };
+
+  public shared(message) func setCKBTCVault(vault_ : Principal) : async Principal {
+    assert(_isAdmin(message.caller));
+    lokaCKBTCVault := vault_;
+    vault_;
   };
 
   public shared(message) func pauseCanister(pause_ : Bool) : async Bool {
@@ -82,10 +102,6 @@ shared ({ caller = owner }) actor class Miner({
 
   };
 
-  func transferCKBTC() : async Nat {  
-    let canister2 = actor("mxzaz-hqaaa-aaaar-qaada-cai"): actor { getValue: () -> async Nat };  
-    return await canister2.getValue();  
-  };  
 
   func _isRegistered(p : Principal, username_ : Text) : Bool {
     if(_isNotRegistered(p,username_))return false;
@@ -122,6 +138,11 @@ shared ({ caller = owner }) actor class Miner({
     key;
   };
 
+   public shared(message) func setF2PoolKey(key : Text) : async Text {
+    assert(_isAdmin(message.caller));
+    f2poolKey := key;
+    key;
+  };
   private func addMiner(f2poolUsername_ : Text, hashrate_ : Nat, wallet : Principal) : async Bool {
     //assert(_isAdmin(message.caller));
     assert(_isNotRegistered(wallet,f2poolUsername_));
@@ -139,6 +160,7 @@ shared ({ caller = owner }) actor class Miner({
 
       miners.add(miner_);
       minerStatus.add({id = minersIndex; var verified = true; var lastCheckedBalance = 0.0; var totalWithdrawn = 0.0});
+      minerRewards.add({id = minersIndex; var available = 0.0; var claimed = 0.0});
       minersIndex+=1;
       totalHashrate +=hash_;
       true;
@@ -267,17 +289,23 @@ shared ({ caller = owner }) actor class Miner({
     true;
   };*/
 
+  //http://146.190.146.168:3000/transfer
+
+
+
+
   public shared(message) func withdrawUSDT(username_ : Text, amount_ : Float, addr_ : Text, usd_ : Text) : async Bool {
-    /*assert(_isNotPaused());
+    assert(_isNotPaused());
     assert(_isVerified(message.caller, username_));
     let amountNat_ : Nat = textToNat(Int.toText(btcToSats(amount_)));
     let miners_ = getMiner(message.caller);
     let miner_ = miners_[0];
-    var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id); */
+    var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id); 
 
 
    let ic : T.IC = actor ("aaaaa-aa");
-   let url = "https://miner.lokamining.com/api/withdraw?targetAddress="#addr_#"&amount="#usd_;
+
+   let url = "https://api.lokamining.com/transfer?targetAddress="#addr_#"&amount="#usd_;
    //let url = "https://loka-miners.vercel.app/api/withdraw?targetAddress="#addr_#"&amount="#usd_;
    
     let request_headers = [
@@ -310,12 +338,45 @@ shared ({ caller = owner }) actor class Miner({
         case (null) { "No value returned" };
         case (?y) { y };
     };
-   
-    /*minerStatus_.totalWithdrawn+= amount_;
-    totalBalance-=amount_;
-    totalWithdrawn+=amount_; */
 
-    true;
+    if (decoded_text=="true"){
+       let res = await moveCKBTC(amount_);
+      if(res){
+        minerStatus_.totalWithdrawn+= amount_;
+        totalBalance-=amount_;
+        totalWithdrawn+=amount_;
+      };
+      return res;
+      //return true;
+    };
+   
+    false;
+  };
+
+
+  func moveCKBTC(amount_ : Float) : async Bool {
+    assert(_isNotPaused());
+
+    let amountNat_ : Nat = textToNat(Int.toText(btcToSats(amount_)));
+    
+    let transferResult = await CKBTC.icrc1_transfer({
+      amount = amountNat_;
+      fee = ?10;
+      created_at_time = null;
+      from_subaccount=null;
+      to = {owner=lokaCKBTCVault; subaccount=null};
+      memo = null;
+    });
+    var res = 0;
+    switch (transferResult)  {
+      case (#Ok(number)) {
+        return true;
+      };
+      case (#Err(msg)) {return false;};
+    };
+
+
+    false;
   };
 
 
@@ -326,6 +387,7 @@ shared ({ caller = owner }) actor class Miner({
     return amountFloat_;
   };
   
+
   func getMiner(wallet_ : Principal) : [T.Miner] {
     var miner_id : Nat = 0;
      let minerList = Buffer.mapFilter<T.Miner,T.Miner >(miners, func (miner) {
@@ -344,6 +406,7 @@ shared ({ caller = owner }) actor class Miner({
     let miners_ = getMiner(message.caller);
     let miner_ = miners_[0];
     let status_ = minerStatus.get(miner_.id);
+    let reward_ = minerRewards.get(miner_.id);
     let minerData : T.MinerData = {
         id  = miner_.id;
         walletAddress = miner_.walletAddress;
@@ -353,11 +416,50 @@ shared ({ caller = owner }) actor class Miner({
         verified = status_.verified;
         lastCheckedBalance = status_.lastCheckedBalance;
         totalWithdrawn = status_.totalWithdrawn;
+        available = reward_.available;
+        claimed = reward_.claimed;
     };
     minerData;
   };
 
   //need a timer to check balance every 24 hrs
+  public shared(message) func distributeF2PoolReward() : async Bool {
+   let ic : T.IC = actor ("aaaaa-aa");
+   let url = "https://api.f2pool.com/bitcoin/lokabtc";
+    let request_headers = [
+        { name = "User-Agent"; value = "miner_canister" },
+        { name = "Content-Type"; value = "application/json" },
+        { name = "F2P-API-SECRET"; value = f2poolKey },
+    ];
+
+    let transform_context : T.TransformContext = {
+      function = transform;
+      context = Blob.fromArray([]);
+    };
+
+    // Finally, define the HTTP request.
+
+    let http_request : T.HttpRequestArgs = {
+        url = url;
+        max_response_bytes = null; //optional for request
+        headers = request_headers;
+        body = null; //optional for request
+        method = #get;
+        transform = ?transform_context;
+    };
+
+     Cycles.add(30_000_000_000);
+
+
+    let http_response : T.HttpResponsePayload = await ic.http_request(http_request);
+    let response_body: Blob = Blob.fromArray(http_response.body);
+    let decoded_text: Text = switch (Text.decodeUtf8(response_body)) {
+        case (null) { "No value returned" };
+        case (?y) { y };
+    };
+    Debug.print(decoded_text);
+    true;
+  };
 
   /*public shared(message) func minerCheckin(id_ : Nat, status_ : Bool) : async Float {
 
@@ -403,14 +505,24 @@ shared ({ caller = owner }) actor class Miner({
   }; */
 
 
- public shared(message) func verify_miner(uname : Text, hash_ : Nat) : async Bool {
+  func distributeMiningRewards(btcAmount : Float) {
+    Buffer.iterate<T.Miner>(miners, func (miner) {
+      let reward_ = minerRewards.get(miner.id);
+      
+      
+    });
+    
+  };
+
+
+ public shared(message) func verifyMiner(uname : Text, hash_ : Nat) : async Bool {
    assert(_isNotVerified(message.caller,uname));
    let ic : T.IC = actor ("aaaaa-aa");
    let url = "https://api.f2pool.com/bitcoin/lokabtc/"#uname#"-lokabtc";
     let request_headers = [
         { name = "User-Agent"; value = "miner_canister" },
         { name = "Content-Type"; value = "application/json" },
-        { name = "F2P-API-SECRET"; value = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h" },
+        { name = "F2P-API-SECRET"; value = f2poolKey },
     ];
 
     let transform_context : T.TransformContext = {

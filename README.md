@@ -1,4 +1,4 @@
-# loka_canister
+## MAIN CANISTER
 
 Loka onchain bitcoin mining platform canisters on ICP
 
@@ -140,3 +140,10 @@ Velo NFT : lvpcn-waaaa-aaaak-qcnna-cai
 Velo Controller : lsoez-3yaaa-aaaak-qcnnq-cai
 LBTC : lhjvu-2qaaa-aaaak-qcnoa-cai
 LKLM : laita-xiaaa-aaaak-qcnoq-cai
+
+
+
+## MINER CANSITER
+
+dfx deploy miner --argument '(record{admin = principal "2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae"})' --network ic
+dfx deploy miner --argument '(record{admin = principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe"})'
