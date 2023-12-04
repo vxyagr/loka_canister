@@ -41,8 +41,8 @@ shared ({ caller = owner }) actor class Miner({
 
   var minerStatus = Buffer.Buffer<T.MinerStatus>(0);
   var miners = Buffer.Buffer<T.Miner>(0);
-  var minerStatus_ : [T.MinerStatus]= []; 
-  var miners_ : [T.Miner]= []; 
+  var minerStatus_ : [T.MinerStatus]= []; // for upgrade
+  var miners_ : [T.Miner]= []; // for upgrade 
   var minerRewards = Buffer.Buffer<T.MinerReward>(0);
   var lokaCKBTCVault : Principal = admin; 
   var f2poolKey : Text = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h";
