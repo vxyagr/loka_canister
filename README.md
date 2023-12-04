@@ -17,6 +17,8 @@ make sure you have installed npm, nodejs, and ICP Motoko SDK
 dfx deploy loka --argument '(record{admin = principal "your principal"})'
 dfx deploy betalk --argument '(record{admin = principal "rlea3-jid2o-qrpi6-w72yb-pf24t-dd6vc-6du7b-r4lnm-sccfm-mhkhu-sae"})'
 
+dfx deploy loka --argument '(record{admin = principal "2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae"})'
+
 dfx deploy miner --argument '(record{admin = principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe"})' 
 ## 2. Deploy ICRCs
 

@@ -27,11 +27,8 @@ This is how the business model is represented by ICP canisters.
 Step-by-step guide to get a copy of the project up and running locally for development and testing.
 
 ### Prerequisites
-IC SDK,
+IC SDK (https://internetcomputer.org/docs/current/developer-docs/setup/install/) (Mac/Linux and Windows with WSL)
 
-```bash
-$ install required software and libraries
-```
 
 ### Install
 A step-by-step guide to installing the project, including necessary configuration etc.
@@ -41,10 +38,12 @@ $ git clone <GitHub repo>
 $ cd <project>
 $ npm install
 $ dfx start --background
-$ dfx deploy
+$ dfx deploy // deploy local ckBTC token
+$ dfx deploy // deploy local LOM token
+$ dfx deploy // deploy local ckUSD token
 ```
 
-Nullam eu dictum ipsum, eu sagittis lacus. Integer posuere purus vel nisi sodales posuere. Donec dolor libero, posuere ac lacinia vitae, ornare a nisl. Praesent placerat quam non elit blandit, ut pretium lacus rutrum.
+
 
 ## Usage
 Most projects have a frontend, so link to the canister and provide a brief getting-started instruction. If the project has a backend that may be called without a frontend, which is typically the case for developer libraries, tooling, infrastructure etc., then provide some basic examples of how to use it. 
@@ -74,28 +73,15 @@ let value = myFunc("abc");
 ## Documentation
 Further documentation can exist in the README file if the project only contains a few functions. It can also be located elsewhere, if it is extensive, if this is the case, link to it.  
 
-## Testing
-Test instructions, and test scripts, for this project:
 
-```bash
-$ run test
-```
-
-Test specific feature:
-
-```bash
-$ run test 1
-```
 
 ## Roadmap
 Describe the project roadmap, this could be the grant milestones, but it could also be the team's broader project roadmap.
 
-- [x] Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-- [x] Praesent semper quis libero eu fermentum. 
-- [x] Morbi sed velit scelerisque, semper ante vel, tincidunt velit. 
-- [x] Sed posuere feugiat nisi, et porttitor ante volutpat ac.
-- [ ] Praesent vehicula ultrices vehicula. Suspendisse arcu dui, egestas ac lacus non, efficitur lacinia purus.
-- [ ] Curabitur ornare vehicula feugiat.
+- [Q4 2023] Alpha Launch - Miner Dashboard.
+- [Q1 2024] Lokamining Launch. 
+- [Q2 2024] Trove Bear and Bull Vault. 
+
 
 ## License
 This project is licensed under the MIT license, see LICENSE.md for details. See CONTRIBUTE.md for details about how to contribute to this project. 
@@ -107,7 +93,6 @@ This project is licensed under the MIT license, see LICENSE.md for details. See 
 
 ## References
 - [Internet Computer](https://internetcomputer.org)
-- Etiam dolor ante
-- Nullam iaculis risus vitae
+
 
 

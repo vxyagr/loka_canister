@@ -22,10 +22,10 @@ import { abs } = "mo:base/Int";
 import Nat8 "mo:base/Nat8";
 
 //@dev canister dependencies
-import LKRC "canister:lkrc";
+import LUSD "canister:stable";
 import LBTC "canister:lbtc";
-import LKLM "canister:lklm";
-import VELONFT "canister:velonft";
+import LOM "canister:lom";
+import NFT "canister:nft";
 
 
 import T "../types";
@@ -416,7 +416,7 @@ func intToNat( int_ : Int) : Nat {
       return "Not NFT owner";
     }else{
       Debug.print("Recharging LET"#caller_);
-    let transferResult = await LKRC.icrc2_transfer_from({
+    let transferResult = await LUSD.icrc2_transfer_from({
       from = {owner=message.caller; subaccount=null};
       amount = amount_;
       fee = null;
@@ -466,11 +466,11 @@ func intToNat( int_ : Int) : Nat {
 
   public shared(message) func burnLET(from_ : Principal, amount_ : Float) : async Bool {
 
-    let decimals = await LKRC.icrc1_decimals();
+    let decimals = await LUSD.icrc1_decimals();
     let fdecimals = natToFloat(Nat8.toNat(decimals));
     
     let amt_ = intToNat(Float.toInt(amount_ * fdecimals));
-    let transferResult = await LKRC.icrc2_transfer_from({
+    let transferResult = await LUSD.icrc2_transfer_from({
       from = {owner=from_; subaccount=null};
       amount = amt_;
       fee = null;
@@ -585,7 +585,7 @@ func intToNat( int_ : Int) : Nat {
     if (amount_<=0 or owner_!=caller_) {
       0
     }else{
-    let transferResult = await LKLM.icrc1_transfer({
+    let transferResult = await LOM.icrc1_transfer({
       amount = amount_;
       fee = null;
       created_at_time = null;
