@@ -1,29 +1,77 @@
-## MAIN CANISTER
+# Loka
+Loka is a platform that enables retail investors to acquire BTC at better than market prices through co-investing with Bitcoin miners. The arrangement is based on a trustless non-custodial escrow solution, which eliminates any exposure to centralized party risk.
 
-Loka onchain bitcoin mining platform canisters on ICP
+https://lokamining.com
 
-Steps to deploy
-1. Main Loka
-2. ICRCs
-3. NFT then Controller for each mining site
-4. Register mining site to Main Loka canister
+With Loka :
+- Miners can get upfront reward in stable currency, benefiting in value of present
+- Retail investors can have access to safe, secure, decentralized, and collateralized bitcoin mining
+- Collateral provider can deposit their collateral and gain profit from Loka transactions
+
+### Terms
+Loka has several main terms that should be remembered :
+1. Stash : Stash is a term for hashrate produced by miner, which then transferred to Loka, therefore redirecting their bitcoin mining rewards to Loka
+2. Trove : Trove is a chunk of Stash, purchased by retail investor therefore miner will get $ as "hashrate rent contract", and retail investor will get bitcoin reward from the Trove they bought
+3. Battery : Each Trove, which is actually hashrate, needs cost to pay their electricity, which the term "Battery" is a self explanatory, a token to recharge Trove. Optionally, retail investor can recharge their "Battery" by purchasing ckERC-20 stable coin, or by letting Loka to substract their bitcoin mining reward to pay for the battery cost.
+
+## Introduction
+This project is a set of Motoko canister implementing trustless, decentralized, and collateralized bitcoin mining platform.
+It handles business models for 3 actors : the miners, collateral providers, and retail investors.
+Loka run on Internet Computer, leveraging ckBTC, a non-custodial bitcoin wrapper, allowing users to safely use bitcoin transaction in an extremely faster execution.
+
+In this protocol:
+- Miner can transfer their hashrate to Loka, and creating Stash and Troves to be sold to retail investors.
+- Retail investor can rent hashrate from miner and directly claim ckBTC to their wallet as mining rewards.
+- Collateral provider can deposit their collateral to the miners they trust, and claim profit from transactions.
+
+This is how the business model is represented by ICP canisters. 
+
+![Illustration Example](loka-business-model.png)
+
+## Technical Architecture
+### Overview
+### Miners
+### Lokamining
+### Collateral
+### Front End
+
+![Image](local-workflow.png)
+## Installation
+Step-by-step guide to get a copy of the project up and running locally for development and testing.
+
+### Prerequisites
+IC SDK (https://internetcomputer.org/docs/current/developer-docs/setup/install/) (Mac/Linux and Windows with WSL)
 
 
-Local deployment :
-make sure you have installed npm, nodejs, and ICP Motoko SDK
+### Install
+A step-by-step guide to installing the project, including necessary configuration etc.
+#### Setting up environment
 
+```bash
+$ git clone <GitHub repo>
+$ cd <project>
+$ npm install
 
-## 1. Deploy main loka canister
-dfx deploy loka --argument '(record{admin = principal "your principal"})'
-dfx deploy betalk --argument '(record{admin = principal "rlea3-jid2o-qrpi6-w72yb-pf24t-dd6vc-6du7b-r4lnm-sccfm-mhkhu-sae"})'
+```
 
-dfx deploy loka --argument '(record{admin = principal "2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae"})'
+#### Deploying local ICRC1 token canisters
 
-dfx deploy miner --argument '(record{admin = principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe"})' 
-## 2. Deploy ICRCs
+These tokens are being used as currencies in Loka ecosystem.
+In production environment, LBTC should be replaced by ckBTC ledger on ICP.
+LBTC is a token to represent Bitcoin mining reward, which is ckBTC in mainnet
+LOM is Loka native token, rewarded for staked NFTs
+ckUSD is a stable currency being used to purchase Loka mining Troves and Battery power.
 
-deploy tokens (there are 3 ICRCS, this one is example) :
-dfx deploy lbtc  --argument "(variant {Init = 
+These tokens will be required as dependency by several other Loka canisters
+
+Now lets deploy these local tokens (make sure you are still in the project root directory) :
+
+```bash
+$ export MINTER = $(dfx identity get-principal)
+$ dfx deploy // deploy local ckBTC token
+$ dfx deploy // deploy local LOM token
+$ dfx deploy // deploy local ckUSD token
+$ dfx deploy lbtc  --argument "(variant {Init = 
 record {
      token_symbol = \"LBTC\";
      token_name = \"LBTC\";
@@ -41,10 +89,10 @@ record {
  }
 })"
 
-dfx deploy lklm  --argument "(variant {Init = 
+$ dfx deploy lom  --argument "(variant {Init = 
 record {
-     token_symbol = \"LKLM\";
-     token_name = \"LKLM\";
+     token_symbol = \"LOM\";
+     token_name = \"LOM\";
      minting_account = record { owner = principal \"${MINTER}\" };
      transfer_fee = 0;
      metadata = vec {};
@@ -60,10 +108,10 @@ record {
 })"
 
 
-dfx deploy lkrc  --argument "(variant {Init = 
+$ dfx deploy stable  --argument "(variant {Init = 
 record {
-     token_symbol = \"LKRC\";
-     token_name = \"LKRC\";
+     token_symbol = \"LUSD\";
+     token_name = \"LUSD\";
      minting_account = record { owner = principal \"${MINTER}\" };
      transfer_fee = 0;
      metadata = vec {};
@@ -78,9 +126,15 @@ record {
  }
 })"
 
+```
+#### Deploying mainnet ckBTC interface canisters
+On mainnet, Loka will be using ckBTC (which represented by LBTC on local deployment)
+You can follow the step to deploy ckBTC interface canister here : 
 
 
-dfx deploy ckbtc_ledger  --argument "(variant {Init = 
+```bash
+$ export MINTER = $(dfx identity get-principal)
+$ dfx deploy ckbtc_ledger  --argument "(variant {Init = 
 record {
      token_symbol = \"CKBTC\";
      token_name = \"CKBTC\";
@@ -96,56 +150,140 @@ record {
          cycles_for_archive_creation = opt 10000000000000;
      };
  }
-})"
+})" --network ic
 
-## 3. Deploy NFT then mine controller
+```
 
-# deploy the NFT
-dfx deploy (nft name) --argument '(principal "your-minting-principal")'
-dfx deploy velonft --argument '(principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe")'
+#### Deploying Loka Mining Site Canister
+*This part will soon be deprecated as it will be merged with Loka Miner Canister in this document
 
-# deploy controller
-dfx deploy velo --argument '(record{admin = principal "your principal id";hashrate=0.035; electricity = 0.03; miningSiteIdparam = 1 ; siteName = "Velo"; totalHashrate =4000.0 ;})' 
-
-dfx deploy velo --argument '(record{admin = principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe";hashrate=0.035; electricity = 0.035; miningSiteIdparam = 1 ; siteName = "Velo"; totalHashrate =4000.0 ;})'
-
-get your canister id
-dfx canister id nft
-dfx canister id controller
-
-# allow controller as NFT admin
-dfx canister call (nft name) setMinter '(principal "your controller id")'
-
-dfx canister call velonft setMinter '(principal "lsoez-3yaaa-aaaak-qcnnq-cai")'
-
-# and then mint some coin to controller
-
-dfx canister call lbtc mint '(record {
-  to = record {owner = principal "ctiya-peaaa-aaaaa-qaaja-cai"};
-  amount=1_000_000
-},)'
-
-## 4. Register controller and NFT to main Loka
-eg :
-
-dfx canister call loka addMiningSite '("Location", "Name" ,electricityCost; thCost; total_ = 4000; "your nft canister id in step 3"; "your control canister id in step 3")'
-like this
-dfx canister call betalk addMiningSite '("Jakarta", "Velo", 0.035,0.035,4000,"cuj6u-c4aaa-aaaaa-qaajq-cai", "ctiya-peaaa-aaaaa-qaaja-cai")'
-
-
-loka main : rlea3-jid2o-qrpi6-w72yb-pf24t-dd6vc-6du7b-r4lnm-sccfm-mhkhu-sae
-loka local : a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe
-
-current main deployment 9 Oct 2023
-Loka main : l4mjr-aiaaa-aaaak-qcnmq-cai
-Velo NFT : lvpcn-waaaa-aaaak-qcnna-cai
-Velo Controller : lsoez-3yaaa-aaaak-qcnnq-cai
-LBTC : lhjvu-2qaaa-aaaak-qcnoa-cai
-LKLM : laita-xiaaa-aaaak-qcnoq-cai
+Initially, this canister will act as mining site ledger, managing the data of all mining sites (or hashrates) all over the world and Stashes in Loka ecosystem
 
 
 
-## MINER CANSITER
+```bash
+$ export MINTER = $(dfx identity get-principal)
+$ dfx deploy loka --argument '(record{admin = principal "${MINTER}"})'
 
-dfx deploy miner --argument '(record{admin = principal "2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae"})' --network ic
-dfx deploy miner --argument '(record{admin = principal "a3k4v-44u5r-xnkry-u3auc-4x7ti-w7zd4-lm33y-ed5nb-ka7l5-u4eja-kqe"})'
+```
+
+#### Deploying Loka NFT Canister
+To make Loka Troves composable across the chain, whether to be used as collateral for DeFi loans, trading, and such, Loka represent Trove as NFT
+```bash
+$ export MINTER = $(dfx identity get-principal)
+$ dfx deploy nft --argument '(principal "${MINTER}")'
+
+```
+
+
+#### Deploying Loka Mining Site Controller
+This canister works as business logic provider, as all the business logic execution and schedulers are being handled by Controller Canister.
+Including :
+1. minting new Trove
+2. claiming ckBTC reward by retail user
+3. distributing ckBTC reward by system every 24 hours
+
+deployment example :
+
+```bash
+$ export MINTER = $(dfx identity get-principal)
+$ dfx deploy controller --argument '(record{admin = principal "${MINTER}";hashrate=0.035; electricity = 0.035; miningSiteIdparam = 1 ; siteName = "jakarta-1"; totalHashrate =4000.0 ;})'
+
+```
+*This part will soon be deprecated as it will be merged with Loka Miner Canister in this document
+
+#### Deploying Loka Miner Canister
+
+Miner Canister manages all Stashes from onboarding miners, to claiming bitcoin rewards.
+All Troves created are based on Stash data from this canister.
+It has dependency to ckBTC ledger and an external API to transfer USDT to miner's wallet
+
+```bash
+$ export MINTER = $(dfx identity get-principal)
+$ dfx deploy miner --argument '(record{admin = principal "${MINTER}"})'
+
+```
+Miner Canister has its own front end to differentiate it from retail investor.
+
+#### Setting up initial data and mining sites
+
+getting canister ids
+
+```bash
+$ dfx canister id nft
+$ dfx canister id controller
+```
+
+
+setting up controller canister to manage nft canister
+
+```bash
+$ dfx canister call (nft name) setMinter '(principal "your controller id")'
+
+```
+
+put some LBTC token to represent bitcoin mining rewards to your controller
+
+```bash
+$ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"(controller canister id)\";};  amount = 10_000_000_000;})"
+
+```
+
+register the controller to miningSite canister
+
+```bash
+$ dfx canister call betalk addMiningSite '("Jakarta", "Velo", 0.035,0.035,4000,"(nft canister id)", "(controller canister id)")'
+
+```
+
+And Loka canisters is ready
+Miners can send their hashrate
+Retail user can create their Trove
+
+
+
+
+
+## Usage
+Front End example for Loka protocol can be found here : 
+And Loka Miners here :
+
+### Minting new Trove
+Usage examples can be canister calls:
+
+```bash
+$ dfx canister call mycanister myfunc '("abc")'
+```
+
+### Distributing BTC
+
+### Claiming BTC
+
+### Getting Trove data
+
+
+## Documentation
+Further documentation can exist in the README file if the project only contains a few functions. It can also be located elsewhere, if it is extensive, if this is the case, link to it.  
+
+
+
+## Roadmap
+Describe the project roadmap, this could be the grant milestones, but it could also be the team's broader project roadmap.
+
+- [Q4 2023] Alpha Launch - Miner Dashboard
+- [Q1 2024] Lokamining Launch
+- [Q2 2024] Trove Bear and Bull Vault
+
+
+## License
+This project is licensed under the GNU 3 license 
+
+
+
+## References
+- [Internet Computer](https://internetcomputer.org)
+- [Loka Whitepaper]
+- [Loka Technical Documentation]
+
+
+
