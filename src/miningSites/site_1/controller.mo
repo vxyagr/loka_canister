@@ -113,26 +113,31 @@ shared ({ caller = owner }) actor class VeloController({
           // in case of NFT has been transferred, then the owner should be altered to the new owner
           // and then return null
           */
-          let nftContract : T.NFTContract = {
-            id = nft.id;
-            owner = nft.owner;
-            amount = miningContracts.get(nft.id).amount;
-            duration = miningContracts.get(nft.id).duration;
-            durationText = miningContracts.get(nft.id).durationText;
-            hashrate = miningContracts.get(nft.id).hashrate;
-            start = miningContracts.get(nft.id).start;
-            end = miningContracts.get(nft.id).end;
-            electricityPerDay = miningContracts.get(nft.id).electricityPerDay;
-            claimedLOM = miningRewards.get(nft.id).claimedLOM;
-            claimedBTC = miningRewards.get(nft.id).claimedBTC;
-            claimableBTC = miningRewards.get(nft.id).claimableBTC;
-            claimableLOM = miningRewards.get(nft.id).claimableLOM;
-            LETBalance = miningRewards.get(nft.id).claimedLOM;
-            metadata = nft.metadata;
-            daysLeft = miningRewards.get(nft.id).daysLeft;
-            miningSite = miningSiteId;
-          
-          };
+          //let nft = lokaNFTs.get(nft.id_);
+      let miningContract_ = miningContracts.get(nft.id);
+      let miningReward_ = miningRewards.get(nft.id);
+      let nftContract : T.NFTContract = {
+          id = nft.id;
+          owner = nft.owner;
+          amount = miningContract_.amount;
+          duration = miningContract_.duration;
+          durationText = miningContract_.durationText;
+          hashrate = miningContract_.hashrate;
+          start = miningContract_.start;
+          end = miningContract_.end;
+          electricityPerDay = miningContract_.electricityPerDay;
+          claimedLOM = miningReward_.claimedLOM;
+          claimedBTC = miningReward_.claimedBTC;
+          claimableBTC = miningReward_.claimableBTC;
+          claimableLOM = miningReward_.claimableLOM;
+          LETBalance = miningReward_.LETBalance;
+          metadata = nft.metadata;
+          daysLeft = miningReward_.daysLeft;
+          miningSite = miningSiteId;
+          staked = miningReward_.staked;
+          stakeTime = miningReward_.stakeTime;
+      };
+
           ?nftContract;
         } else {
           null;
@@ -145,24 +150,28 @@ shared ({ caller = owner }) actor class VeloController({
   //@dev get an NFT mining contract by contract ID
   public query (message) func getNFTContract(id_ : Nat) : async T.NFTContract{
       let nft = lokaNFTs.get(id_);
+      let miningContract_ = miningContracts.get(nft.id);
+      let miningReward_ = miningRewards.get(nft.id);
       let nftContract : T.NFTContract = {
           id = nft.id;
           owner = nft.owner;
-          amount = miningContracts.get(nft.id).amount;
-          duration = miningContracts.get(nft.id).duration;
-          durationText = miningContracts.get(nft.id).durationText;
-          hashrate = miningContracts.get(nft.id).hashrate;
-          start = miningContracts.get(nft.id).start;
-          end = miningContracts.get(nft.id).end;
-          electricityPerDay = miningContracts.get(nft.id).electricityPerDay;
-          claimedLOM = miningRewards.get(nft.id).claimedLOM;
-          claimedBTC = miningRewards.get(nft.id).claimedBTC;
-          claimableBTC = miningRewards.get(nft.id).claimableBTC;
-          claimableLOM = miningRewards.get(nft.id).claimableLOM;
-          LETBalance = miningRewards.get(nft.id).LETBalance;
+          amount = miningContract_.amount;
+          duration = miningContract_.duration;
+          durationText = miningContract_.durationText;
+          hashrate = miningContract_.hashrate;
+          start = miningContract_.start;
+          end = miningContract_.end;
+          electricityPerDay = miningContract_.electricityPerDay;
+          claimedLOM = miningReward_.claimedLOM;
+          claimedBTC = miningReward_.claimedBTC;
+          claimableBTC = miningReward_.claimableBTC;
+          claimableLOM = miningReward_.claimableLOM;
+          LETBalance = miningReward_.LETBalance;
           metadata = nft.metadata;
-          daysLeft = miningRewards.get(nft.id).daysLeft;
+          daysLeft = miningReward_.daysLeft;
           miningSite = miningSiteId;
+          staked = miningReward_.staked;
+          stakeTime = miningReward_.stakeTime;
       };
 
       nftContract;
@@ -237,14 +246,35 @@ func intToNat( int_ : Int) : Nat {
 //@dev calculate total time of all mining contract, as there are new contracts which aged less than 24 hours, returns total seconds
   private func calculateTotalTime() : Float{
     var totalTime = 0;
-    let daySeconds = 24*60*60;
+    let daySeconds =  24*60*60*1_000_000_000;
+
+    let now_ = now();
      Buffer.iterate<T.MiningReward>(miningRewards, func (rewards) {
       if(rewards.firstDay){
         rewards.firstDay:=false;
-        var seconds_ = now()-rewards.start;
+        var seconds_ = now_ -rewards.start;
         totalTime +=intToNat(seconds_);
       }else{
         totalTime += daySeconds;
+      }
+    });
+    return natToFloat(totalTime);
+  };
+
+  public query(message) func calculateTotalStakingTime() : async Float{
+    
+    var totalTime = 0;
+    let daySeconds = 24*60*60*1_000_000_000;
+    let now_ = now();
+     Buffer.iterate<T.MiningReward>(miningRewards, func (rewards) {
+      if(rewards.staked){
+        if(rewards.firstStake){
+          //rewards.firstStake:=false;
+          var seconds_ = now_ -rewards.stakeTime;
+          totalTime +=intToNat(seconds_);
+        }else{
+          totalTime += daySeconds;
+        }
       }
     });
     return natToFloat(totalTime);
@@ -323,6 +353,9 @@ func intToNat( int_ : Int) : Nat {
         end = end_;
         start = start_;
         var firstDay = true;
+        var firstStake = true;
+        var lastBTCDistribution = start_;
+        var lastLOMDistribution = start_;
         };
       miningContracts.add(miningContract_);
       lokaNFTs.add(lokaNFTs_);
@@ -358,12 +391,12 @@ func intToNat( int_ : Int) : Nat {
     let miningRewardsB_ = Buffer.toArray<T.MiningReward>(miningRewards);
 
 
-    var j = Array.size(miningRewardsB_);
+    var j = Array.size(miningRewardsB_) - 1;
     for (i in Iter.range(0, j)) {
       let rewards = miningRewards.get(i);
       if(rewards.daysLeft > 0){
         var owner_ = Principal.fromText(lokaNFTs.get(rewards.id).owner);
-        var stakeSecond = natToFloat(intToNat(now_ - rewards.start));
+        var stakeSecond = natToFloat(intToNat(now_ - rewards.lastBTCDistribution));
         let stakeTimeProportion = stakeSecond / totalTime;
         let hashProportion = rewards.hashrate / totalHashrate;
         var btcReward = amount_ *(stakeTimeProportion*hashProportion); 
@@ -380,6 +413,7 @@ func intToNat( int_ : Int) : Nat {
         let remaining = (rewards.end-now_)/(1000000000*60*60*24);
         
         rewards.claimableBTC += btcReward; 
+        rewards.lastBTCDistribution := now_;
         if(remaining==0)releasedHashrate+=rewards.hashrate;
         rewards.daysLeft := remaining; 
       } 
@@ -389,16 +423,41 @@ func intToNat( int_ : Int) : Nat {
   };
 
   //@dev being called by site admin only, to distribute LOM native token every certain period
-  public shared(message) func distributeLOM(amount_ : Float) : async Float {
+  public shared(message) func distributeLOM(amount_ : Float) : async() {
     //assert(_isAdmin(message.caller));
     let satsPerHashrate = amount_ / totalConsumedHashrate;
-    var releasedHashrate = 0;
-    Buffer.iterate<T.MiningReward>(miningRewards, func (rewards) {
-      if(rewards.daysLeft > 0){
-      rewards.claimableLOM += rewards.hashrate*satsPerHashrate; 
-      }
-    });
-    amount_
+    var releasedHashrate = 0.0;
+    var now_ = Time.now();
+    let totalTime = await calculateTotalStakingTime();
+    let miningRewardsB_ = Buffer.toArray<T.MiningReward>(miningRewards);
+
+
+    var j = Array.size(miningRewardsB_) - 1;
+    //assert(j>0);
+    var default_secs = 24*60*60;
+    for (i in Iter.range(0, j)) {
+      let rewards = miningRewards.get(i);
+      if(rewards.daysLeft > 0 and rewards.staked){
+        var owner_ = Principal.fromText(lokaNFTs.get(rewards.id).owner);
+        var stakeSecond = default_secs;
+        if(rewards.firstStake){
+          rewards.firstStake:=false;
+          stakeSecond := intToNat(now_ -rewards.stakeTime);
+          //totalTime +=intToNat(seconds_);
+        };
+        let stakeTimeProportion = natToFloat(stakeSecond) / totalTime;
+        let hashProportion = rewards.hashrate / totalHashrate;
+        var lomReward = amount_ *(stakeTimeProportion*hashProportion); 
+
+        
+        rewards.claimableLOM += lomReward; 
+        rewards.lastLOMDistribution :=now_;
+        
+      }; 
+    };  
+   
+    lastLOMDistribution := now_;
+    //return 1;
   };
 
   public shared(message) func rechargeLET(id_ : Nat, amount_ : Nat) : async Text {
@@ -517,25 +576,26 @@ func intToNat( int_ : Int) : Nat {
 
   //@dev being called by end user / retail from web, to claim ckBTC to their wallet
   public shared(message) func claimBTC(id_ : Nat) : async Nat {
-
+    let decimals = await LBTC.icrc1_decimals();
+    let fdecimals = Nat8.toNat(decimals);
     let to_ : T.Account = {owner=message.caller};
     var miningReward_ : T.MiningReward = miningRewards.get(id_);
     var owner_ = lokaNFTs.get(id_).owner;
     var caller_ = Principal.toText(message.caller);
-    let temp = miningReward_.claimableBTC;
+    let temp = Float.floor(miningReward_.claimableBTC );
     let amt64 = Float.toInt64(miningReward_.claimableBTC);
     let amount64_ = Int64.toNat64(amt64);
     let amount_ : T.Balance = Nat64.toNat(amount64_);
-    if (amount_<=0 or owner_!=caller_) {
-      1
-    }else{
+    //if (amount_<=0 or owner_!=caller_) {
+      //1
+    //}else{
       Debug.print("Claiming BTC by "#caller_);
     let transferResult = await LBTC.icrc1_transfer({
       amount = amount_;
       fee = null;
       created_at_time = null;
       from_subaccount=null;
-      to = {owner=message.caller; subaccount=null};
+      to = {owner=Principal.fromText(owner_); subaccount=null};
       memo = null;
     });
     var res = 0;
@@ -543,7 +603,8 @@ func intToNat( int_ : Int) : Nat {
       case (#Ok(number)) {
         miningReward_.claimableBTC := 0;
         miningReward_.claimedBTC +=temp;
-        miningRewards.put(id_,miningReward_);
+        //miningRewards.put(id_,miningReward_);
+        //return "Claimed";
         res :=2;
       };
       case (#Err(msg)) {
@@ -568,29 +629,32 @@ func intToNat( int_ : Int) : Nat {
     };
     
     res;
-    }
+    //}
   };
 
   //@dev being called by end user / retail from web, to claim LOM to their wallet
-  public shared(message) func claimLOM(id_ : Nat) : async Nat {
+  public shared(message) func claimLOM(id_ : Nat) : async Text {
+    let decimals = await LOM.icrc1_decimals();
+    let fdecimals = Nat8.toNat(decimals);
     let to_ : T.Account = {owner=message.caller};
     var miningReward_ : T.MiningReward = miningRewards.get(id_);
     var owner_ = lokaNFTs.get(id_).owner;
     var caller_ = Principal.toText(message.caller);
-    let temp = miningReward_.claimableLOM;
+    let temp = Float.floor(miningReward_.claimableLOM ) ;
     let amt64 = Float.toInt64(miningReward_.claimableBTC);
     let amount64_ = Int64.toNat64(amt64);
+    
     let amount_ : T.Balance = Nat64.toNat(amount64_);
 
-    if (amount_<=0 or owner_!=caller_) {
-      0
-    }else{
+    //if (amount_<=0 or owner_!=caller_) {
+      //return "not owner";
+    //}else{
     let transferResult = await LOM.icrc1_transfer({
       amount = amount_;
       fee = null;
       created_at_time = null;
       from_subaccount=null;
-      to = {owner=message.caller; subaccount=null};
+      to = {owner=Principal.fromText(owner_); subaccount=null};
       memo = null;
     });
     var res = 0;
@@ -599,14 +663,37 @@ func intToNat( int_ : Int) : Nat {
         miningReward_.claimableLOM := 0;
         miningReward_.claimedLOM +=temp;
         miningRewards.put(id_,miningReward_);
+        return "Claimed!";
         res :=1;
       };
-      case (#Err(msg)) {res:=0;};
+      case (#Err(msg)) {
+
+        Debug.print("transfer error  ");
+        switch (msg){
+          case (#BadFee(number)){
+            Debug.print("Bad Fee");
+            return "Bad Fee";
+          };
+          case (#GenericError(number)){
+            Debug.print("err "#number.message);
+            return "err "#number.message;
+          };
+          case (#InsufficientFunds(number)){
+            Debug.print("insufficient funds");
+            return "insufficient funds";
+          };
+          case _ {
+            Debug.print("err");
+            return "err";
+          }
+        };
+        res:=0;
+        };
     };
 
   
-    res;
-    }
+    return "err -";
+    //}
     
   };
 
@@ -624,7 +711,8 @@ func intToNat( int_ : Int) : Nat {
 
     if(miningReward_.staked==false and stake_){
       miningReward_.staked:=true;
-      miningReward_.stakeTime:=intToNat(now());
+      miningReward_.firstStake:=true;
+      miningReward_.stakeTime:=now();
     }else if(miningReward_.staked and stake_==false){
       miningReward_.staked:=false;
     };

@@ -192,7 +192,7 @@ deployment example :
 
 ```bash
 $ export MINTER = $(dfx identity get-principal)
-$ dfx deploy controller --argument '(record{admin = principal "${MINTER}";hashrate=0.035; electricity = 0.035; miningSiteIdparam = 1 ; siteName = "jakarta-1"; totalHashrate =4000.0 ;})'
+$ dfx deploy controller --argument '(record{admin = principal "2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae";hashrate=0.035; electricity = 0.035; miningSiteIdparam = 1 ; siteName = "jakarta-1"; totalHashrate =4000.0 ;})'
 
 ```
 *This part will soon be deprecated as it will be merged with Loka Miner Canister in this document
@@ -237,7 +237,7 @@ $ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = princip
 register the controller to miningSite canister
 
 ```bash
-$ dfx canister call betalk addMiningSite '("Jakarta", "Velo", 0.035,0.035,4000,"(nft canister id)", "(controller canister id)")'
+$ dfx canister call loka addMiningSite '("Jakarta", "jakarta-1", 0.035,0.035,4000,"7dktp-hiaaa-aaaam-ab2ea-cai", "7elv3-kqaaa-aaaam-ab2eq-cai")'
 
 ```
 
