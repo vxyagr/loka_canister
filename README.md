@@ -42,6 +42,7 @@ Miners business flow represented as follow
 And this is the flow for retail user 
 ![lokamining](loka_user.png)
 ### Collateral
+(coming soon)
 ### Front End
 
 
