@@ -68,9 +68,7 @@ Now lets deploy these local tokens (make sure you are still in the project root 
 
 ```bash
 $ export MINTER = $(dfx identity get-principal)
-$ dfx deploy // deploy local ckBTC token
-$ dfx deploy // deploy local LOM token
-$ dfx deploy // deploy local ckUSD token
+
 $ dfx deploy lbtc  --argument "(variant {Init = 
 record {
      token_symbol = \"LBTC\";
@@ -225,7 +223,7 @@ $ dfx canister call (nft name) setMinter '(principal "your controller id")'
 put some LBTC token to represent bitcoin mining rewards to your controller
 
 ```bash
-$ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"(controller canister id)\";};  amount = 10_000_000_000;})"
+$ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"7elv3-kqaaa-aaaam-ab2eq-cai\";};  amount = 10_000_000_000;})"
 
 ```
 
