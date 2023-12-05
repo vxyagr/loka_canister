@@ -117,15 +117,20 @@ shared ({ caller = owner }) actor class Miner({
     minerStatus_.verified;
   };
 
-   public query(message) func isVerified(username_ : Text) : async Bool {
+   /*public query(message) func isVerified(username_ : Text) : async Bool {
     if(_isNotRegistered(message.caller,username_))return false;
 
     let miners_ = getMiner(message.caller);
     let miner_ = miners_[0];
     let minerStatus_ = minerStatus.get(miner_.id);
     minerStatus_.verified;
-  };
+  };*/
 
+ public query(message) func isVerified(p : Principal) : async Bool {
+    let miners_ = getMiner(p);
+    if(Array.size(miners_)==0){return false;};
+    true;
+  };
 
   func _isNotVerified(p : Principal, username_ : Text) : Bool {
     if(_isVerified(p,username_))return false;

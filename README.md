@@ -259,15 +259,7 @@ And Loka Miners here :
 ### Minting new Trove
 Usage examples can be canister calls:
 
-```bash
-$ dfx canister call mycanister myfunc '("abc")'
-```
-
-### Distributing BTC
-
-### Claiming BTC
-
-### Getting Trove data
+`
 
 
 ## Documentation
@@ -291,7 +283,7 @@ This project is licensed under the GNU 3 license
 ## References
 - [Internet Computer](https://internetcomputer.org)
 - [Loka Whitepaper]
-- [Loka Technical Documentation]
+- [Loka Technical Documentation](https://lokamining.gitbook.com)
 
 
 
