@@ -2,7 +2,7 @@
 Loka is a platform that enables retail investors to acquire BTC at better than market prices through co-investing with Bitcoin miners. The arrangement is based on a trustless non-custodial escrow solution, which eliminates any exposure to centralized party risk.
 
 https://lokamining.com
-
+![Loka](Loka.gif)
 With Loka :
 - Miners can get upfront reward in stable currency, benefiting in value of present
 - Retail investors can have access to safe, secure, decentralized, and collateralized bitcoin mining
@@ -39,7 +39,10 @@ Based on the business model, canister represented as diagram below
 Miners business flow represented as follow
 ![Miners](miner2.png)
 ### Lokamining
+And this is the flow for retail user 
+![lokamining](loka_user.png)
 ### Collateral
+(coming soon)
 ### Front End
 
 
