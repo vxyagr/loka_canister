@@ -36,6 +36,12 @@ module {
         hashrate : Nat;
      };
 
+     public type MinerReward = {
+        id : Nat;
+        var available : Float;
+        var claimed : Float;
+     };
+
     public type MinerData = {
         id : Nat;
         walletAddress : Principal;
@@ -45,6 +51,8 @@ module {
         verified : Bool;
         lastCheckedBalance : Float;
         totalWithdrawn : Float;
+        available : Float;
+        claimed : Float;
      };
 
      public type Timestamp = Nat64;
