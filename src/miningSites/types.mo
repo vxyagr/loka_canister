@@ -54,6 +54,8 @@ module {
         metadata : Text;
         daysLeft : Int;
         miningSite : Nat;
+        staked : Bool;
+        stakeTime : Int;
         //canister : Principal;
     };
 
@@ -106,8 +108,11 @@ module {
         var LETBalance : Float;
         electricityPerDay: Float;
         var staked : Bool;
-        var stakeTime : Nat;
+        var stakeTime : Int;
         var firstDay : Bool;
+        var firstStake : Bool;
+        var lastBTCDistribution : Int;
+        var lastLOMDistribution : Int;
         start : Int;
         end : Int;
     };

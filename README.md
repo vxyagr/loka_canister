@@ -26,16 +26,23 @@ In this protocol:
 
 This is how the business model is represented by ICP canisters. 
 
-![Illustration Example](loka-business-model.png)
+
 
 ## Technical Architecture
+
 ### Overview
+![Overview](Overview.png)
+### Protocol Design
+Based on the business model, canister represented as diagram below
+![Canisters](protocol_design.png)
 ### Miners
+Miners business flow represented as follow
+![Miners](Miners.png)
 ### Lokamining
 ### Collateral
 ### Front End
 
-![Image](local-workflow.png)
+
 ## Installation
 Step-by-step guide to get a copy of the project up and running locally for development and testing.
 
@@ -68,9 +75,7 @@ Now lets deploy these local tokens (make sure you are still in the project root 
 
 ```bash
 $ export MINTER = $(dfx identity get-principal)
-$ dfx deploy // deploy local ckBTC token
-$ dfx deploy // deploy local LOM token
-$ dfx deploy // deploy local ckUSD token
+
 $ dfx deploy lbtc  --argument "(variant {Init = 
 record {
      token_symbol = \"LBTC\";
@@ -187,7 +192,7 @@ deployment example :
 
 ```bash
 $ export MINTER = $(dfx identity get-principal)
-$ dfx deploy controller --argument '(record{admin = principal "${MINTER}";hashrate=0.035; electricity = 0.035; miningSiteIdparam = 1 ; siteName = "jakarta-1"; totalHashrate =4000.0 ;})'
+$ dfx deploy controller --argument '(record{admin = principal "2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae";hashrate=0.035; electricity = 0.035; miningSiteIdparam = 1 ; siteName = "jakarta-1"; totalHashrate =4000.0 ;})'
 
 ```
 *This part will soon be deprecated as it will be merged with Loka Miner Canister in this document
@@ -225,14 +230,14 @@ $ dfx canister call (nft name) setMinter '(principal "your controller id")'
 put some LBTC token to represent bitcoin mining rewards to your controller
 
 ```bash
-$ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"(controller canister id)\";};  amount = 10_000_000_000;})"
+$ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"7elv3-kqaaa-aaaam-ab2eq-cai\";};  amount = 10_000_000_000;})"
 
 ```
 
 register the controller to miningSite canister
 
 ```bash
-$ dfx canister call betalk addMiningSite '("Jakarta", "Velo", 0.035,0.035,4000,"(nft canister id)", "(controller canister id)")'
+$ dfx canister call loka addMiningSite '("Jakarta", "jakarta-1", 0.035,0.035,4000,"7dktp-hiaaa-aaaam-ab2ea-cai", "7elv3-kqaaa-aaaam-ab2eq-cai")'
 
 ```
 
