@@ -26,7 +26,7 @@ import LUSD "canister:stable";
 import LBTC "canister:lbtc";
 import LOM "canister:lom";
 import NFT "canister:nft";
-
+import CKBTC "canister:ckbtc_ledger";
 
 import T "../types";
 
@@ -460,6 +460,10 @@ func intToNat( int_ : Int) : Nat {
     //return 1;
   };
 
+  func hello() : async Nat {
+1;
+  };
+
   public shared(message) func rechargeLET(id_ : Nat, amount_ : Nat) : async Text {
 
  
@@ -472,8 +476,8 @@ func intToNat( int_ : Int) : Nat {
     let amount64_ = Int64.toNat64(amt64);
     let amount_ : T.Balance = Nat64.toNat(amount64_);
     if (amount_<=0 or owner_!=caller_) {
-      return "Not NFT owner";
-    }else{
+      //return "Not NFT owner";
+    };
       Debug.print("Recharging LET"#caller_);
     let transferResult = await LUSD.icrc2_transfer_from({
       from = {owner=message.caller; subaccount=null};
@@ -520,7 +524,7 @@ func intToNat( int_ : Int) : Nat {
     };
     
     "Failed";
-    }
+    
   };
 
   public shared(message) func burnLET(from_ : Principal, amount_ : Float) : async Bool {
@@ -631,6 +635,66 @@ func intToNat( int_ : Int) : Nat {
     res;
     //}
   };
+
+  /*
+  //@dev claim ckBTC
+public shared(message) func claimBTC(id_ : Nat) : async Nat {
+    let decimals = await CKBTC.icrc1_decimals();
+    let fdecimals = Nat8.toNat(decimals);
+    let to_ : T.Account = {owner=message.caller};
+    var miningReward_ : T.MiningReward = miningRewards.get(id_);
+    var owner_ = lokaNFTs.get(id_).owner;
+    var caller_ = Principal.toText(message.caller);
+    let temp = Float.floor(miningReward_.claimableBTC );
+    let amt64 = Float.toInt64(miningReward_.claimableBTC);
+    let amount64_ = Int64.toNat64(amt64);
+    let amount_ : T.Balance = Nat64.toNat(amount64_);
+    //if (amount_<=0 or owner_!=caller_) {
+      //1
+    //}else{
+      Debug.print("Claiming BTC by "#caller_);
+    let transferResult = await CKBTC.icrc1_transfer({
+      amount = amount_;
+      fee = null;
+      created_at_time = null;
+      from_subaccount=null;
+      to = {owner=Principal.fromText(owner_); subaccount=null};
+      memo = null;
+    });
+    var res = 0;
+    switch (transferResult)  {
+      case (#Ok(number)) {
+        miningReward_.claimableBTC := 0;
+        miningReward_.claimedBTC +=temp;
+        //miningRewards.put(id_,miningReward_);
+        //return "Claimed";
+        res :=2;
+      };
+      case (#Err(msg)) {
+
+        Debug.print("transfer error  ");
+        switch (msg){
+          case (#BadFee(number)){
+            Debug.print("Bad Fee");
+          };
+          case (#GenericError(number)){
+            Debug.print("err "#number.message);
+          };
+          case (#InsufficientFunds(number)){
+            Debug.print("insufficient funds");
+          };
+          case _ {
+            Debug.print("err");
+          }
+        };
+        res:=0;
+        };
+    };
+    
+    res;
+    //}
+  };
+  */
 
   //@dev being called by end user / retail from web, to claim LOM to their wallet
   public shared(message) func claimLOM(id_ : Nat) : async Text {
