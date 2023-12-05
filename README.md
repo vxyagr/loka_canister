@@ -31,13 +31,13 @@ This is how the business model is represented by ICP canisters.
 ## Technical Architecture
 
 ### Overview
-![Overview](Overview.png)
+![Overview](Overview2.png)
 ### Protocol Design
 Based on the business model, canister represented as diagram below
 ![Canisters](protocol_design.png)
 ### Miners
 Miners business flow represented as follow
-![Miners](Miners.png)
+![Miners](miner2.png)
 ### Lokamining
 ### Collateral
 ### Front End
