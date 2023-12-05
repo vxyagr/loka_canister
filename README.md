@@ -39,6 +39,8 @@ Based on the business model, canister represented as diagram below
 Miners business flow represented as follow
 ![Miners](miner2.png)
 ### Lokamining
+And this is the flow for retail user 
+![lokamining](loka_user.png)
 ### Collateral
 ### Front End
 
