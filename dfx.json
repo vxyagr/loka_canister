@@ -14,8 +14,9 @@
       "type": "motoko",
       "dependencies": [
         "lbtc",
-        "lklm",
-        "velonft"
+        "lom",
+        "stable",
+        "nft"
     ]
     },
     "nft": {

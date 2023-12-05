@@ -86,7 +86,7 @@ shared ({ caller = owner }) actor class VeloController({
   };
 
 //@dev timers initialization
-   var dailyDistribution = ignore recurringTimer(#seconds (10),  func () : async () {
+   var dailyDistribution = ignore recurringTimer(#seconds (3600),  func () : async () {
       Debug.print("Timer log");
   });
 
@@ -338,7 +338,7 @@ func intToNat( int_ : Int) : Nat {
           metadata=?#json("null");
       }));
       let mintArgs = [mintRecord];
-      let mintResult = await VELONFT.ext_mint(mintArgs);  
+      let mintResult = await NFT.ext_mint(mintArgs);  
       //Debug.print("minted "#Nat.toText(Array.size(mintResult)));
       nftIndex +=1;
       nftIndex-1;
