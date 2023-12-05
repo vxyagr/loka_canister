@@ -26,16 +26,23 @@ In this protocol:
 
 This is how the business model is represented by ICP canisters. 
 
-![Illustration Example](loka-business-model.png)
+
 
 ## Technical Architecture
+
 ### Overview
+![Overview](Overview.png)
+### Protocol Design
+Based on the business model, canister represented as diagram below
+![Canisters](protocol_design.png)
 ### Miners
+Miners business flow represented as follow
+![Miners](Miners.png)
 ### Lokamining
 ### Collateral
 ### Front End
 
-![Image](local-workflow.png)
+
 ## Installation
 Step-by-step guide to get a copy of the project up and running locally for development and testing.
 
