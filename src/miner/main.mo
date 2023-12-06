@@ -117,6 +117,8 @@ shared ({ caller = owner }) actor class Miner({
     minerStatus_.verified;
   };
 
+
+
    /*public query(message) func isVerified(username_ : Text) : async Bool {
     if(_isNotRegistered(message.caller,username_))return false;
 
@@ -510,7 +512,7 @@ shared ({ caller = owner }) actor class Miner({
   }; */
 
 
-  func distributeMiningRewards(btcAmount : Float) {
+  func distributeMiningRewards(btcAmount : Nat) {
     Buffer.iterate<T.Miner>(miners, func (miner) {
       let reward_ = minerRewards.get(miner.id);
       

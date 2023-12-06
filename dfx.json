@@ -9,6 +9,17 @@
       "type": "motoko",
       "dependencies": ["ckbtc_ledger"]
     },
+    "ckbtc_minter" : {
+      "type" : "custom",
+      "candid": "https://github.com/dfinity/ic/blob/master/rs/bitcoin/ckbtc/minter/ckbtc_minter.did",
+      "wasm": "https://download.dfinity.systems/ic/d6d395a480cd6986b4788f4aafffc5c03a07e46e/canisters/ic-ckbtc-minter.wasm.gz",
+      "remote": {
+        "candid": "ckbtc_minter.did",
+        "id": {
+          "ic" : "mqygn-kiaaa-aaaar-qaadq-cai"
+        }
+      }
+    },
     "controller": {
       "main": "src/miningSites/site_1/controller.mo",
       "type": "motoko",
