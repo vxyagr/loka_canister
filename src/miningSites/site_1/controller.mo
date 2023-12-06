@@ -476,7 +476,7 @@ func intToNat( int_ : Int) : Nat {
     let amount64_ = Int64.toNat64(amt64);
     let amount_ : T.Balance = Nat64.toNat(amount64_);
     if (amount_<=0 or owner_!=caller_) {
-      //return "Not NFT owner";
+      return "Not NFT owner";
     };
       Debug.print("Recharging LET"#caller_);
     let transferResult = await LUSD.icrc2_transfer_from({
