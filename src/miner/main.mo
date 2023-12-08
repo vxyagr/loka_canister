@@ -18,7 +18,7 @@ import Result "mo:base/Result";
 import Blob "mo:base/Blob";
 import Cycles "mo:base/ExperimentalCycles";
 import Char "mo:base/Char";
-
+import { now } = "mo:base/Time";
 
 
 import T "types";
@@ -41,19 +41,37 @@ shared ({ caller = owner }) actor class Miner({
 
   var minerStatus = Buffer.Buffer<T.MinerStatus>(0);
   var miners = Buffer.Buffer<T.Miner>(0);
-  var minerStatus_ : [T.MinerStatus]= []; // for upgrade
-  var miners_ : [T.Miner]= []; // for upgrade 
+  
   var minerRewards = Buffer.Buffer<T.MinerReward>(0);
   var lokaCKBTCVault : Principal = admin; 
   var f2poolKey : Text = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h";
 
+
+  //upgrade temp params
+  stable var minerStatus_ : [T.MinerStatus]= []; // for upgrade
+  stable var miners_ : [T.Miner]= []; // for upgrade 
+  stable var minerRewards_ : [T.MinerReward]=[];
+
   system func preupgrade() {
         miners_ := Buffer.toArray<T.Miner>(miners);
         minerStatus_ := Buffer.toArray<T.MinerStatus>(minerStatus);
+        minerRewards_ := Buffer.toArray<T.MinerReward>(minerRewards);
+     
   };
   system func postupgrade() {
         miners := Buffer.fromArray<T.Miner>(miners_); 
         minerStatus:= Buffer.fromArray<(T.MinerStatus)>(minerStatus_);
+        minerRewards := Buffer.fromArray<T.MinerReward>(minerRewards_);
+  };
+
+  public shared(message) func clearData() : async (){
+    assert(_isAdmin(message.caller));
+    minerStatus := Buffer.Buffer<T.MinerStatus>(0);
+    miners := Buffer.Buffer<T.Miner>(0);
+    minerRewards := Buffer.Buffer<T.MinerReward>(0);
+    totalBalance :=0;
+    minersIndex := 0;
+    totalWithdrawn :=0;
   };
 
   func _isAdmin(p : Principal) : Bool {
@@ -78,6 +96,10 @@ shared ({ caller = owner }) actor class Miner({
     assert(_isAdmin(message.caller));
     lokaCKBTCVault := vault_;
     vault_;
+  };
+
+  public query(message) func getIndex() : async Nat {
+    minersIndex;
   };
 
   public shared(message) func pauseCanister(pause_ : Bool) : async Bool {
@@ -134,6 +156,13 @@ shared ({ caller = owner }) actor class Miner({
     true;
   };
 
+  func _isAddressVerified(p : Principal) :  Bool {
+    let miners_ = getMiner(p);
+    if(Array.size(miners_)==0){return false;};
+    true;
+  };
+
+
   func _isNotVerified(p : Principal, username_ : Text) : Bool {
     if(_isVerified(p,username_))return false;
     true;
@@ -166,6 +195,7 @@ shared ({ caller = owner }) actor class Miner({
       };
 
       miners.add(miner_);
+      Debug.print("miner added");
       minerStatus.add({id = minersIndex; var verified = true; var lastCheckedBalance = 0.0; var totalWithdrawn = 0.0});
       minerRewards.add({id = minersIndex; var available = 0.0; var claimed = 0.0});
       minersIndex+=1;
@@ -301,7 +331,7 @@ shared ({ caller = owner }) actor class Miner({
 
 
 
-  public shared(message) func withdrawUSDT(username_ : Text, amount_ : Float, addr_ : Text, usd_ : Text) : async Bool {
+  public shared(message) func withdrawUSDT(username_ : Text, amount_ : Float, addr_ : Text, usd_ : Text) : async Text {
     assert(_isNotPaused());
     assert(_isVerified(message.caller, username_));
     let amountNat_ : Nat = textToNat(Int.toText(btcToSats(amount_)));
@@ -345,19 +375,20 @@ shared ({ caller = owner }) actor class Miner({
         case (null) { "No value returned" };
         case (?y) { y };
     };
-
-    if (decoded_text=="true"){
+    Debug.print("result "#decoded_text);
+    var isValid = Text.contains(decoded_text,#text ":true");
+    if (isValid){
        let res = await moveCKBTC(amount_);
       if(res){
         minerStatus_.totalWithdrawn+= amount_;
         totalBalance-=amount_;
         totalWithdrawn+=amount_;
       };
-      return res;
+      return "USDT transferred";
       //return true;
     };
    
-    false;
+    decoded_text;
   };
 
 
@@ -387,6 +418,67 @@ shared ({ caller = owner }) actor class Miner({
   };
 
 
+  func send_http(url_ : Text) : async Text {
+      let ic : T.IC = actor ("aaaaa-aa");
+
+      let url = url_;
+      //let url = "https://api.lokamining.com/transfer?targetAddress=0xc66fB343f20765CC923b2e79aD8c95FA9ef407fe&amount=blabla";
+      //let url = "https://loka-miners.vercel.app/api/withdraw?targetAddress="#addr_#"&amount="#usd_;
+      //let url = "https://api.lokamining.com";
+        let request_headers = [
+            { name = "User-Agent"; value = "miner_canister" },
+            { name = "Content-Type"; value = "application/json" },
+            { name = "x-api-key"; value = "2021LokaInfinity" },
+            { name = "F2P-API-SECRET"; value = f2poolKey },
+        ];
+      Debug.print("accessing "#url);
+        let transform_context : T.TransformContext = {
+          function = transform;
+          context = Blob.fromArray([]);
+        };
+
+
+        let http_request : T.HttpRequestArgs = {
+            url = url;
+            max_response_bytes = null; //optional for request
+            headers = request_headers;
+            body = null; //optional for request
+            method = #get;
+            transform = ?transform_context;
+        };
+
+        Cycles.add(30_000_000_000);
+
+
+        let http_response : T.HttpResponsePayload = await ic.http_request(http_request);
+        let response_body: Blob = Blob.fromArray(http_response.body);
+        let decoded_text: Text = switch (Text.decodeUtf8(response_body)) {
+            case (null) { "No value returned" };
+            case (?y) { y };
+        };
+        decoded_text;
+  };
+
+
+  public shared(message) func testUSDT() : async Text {
+
+    let id_ = "0xc66fB343f20765CC923b2e79aD8c95FA9ef407fe"#Int.toText(now());
+    let url = "https://api.lokamining.com/transfer?targetAddress=0xc66fB343f20765CC923b2e79aD8c95FA9ef407fe&amount=0.1&id="#id_;
+    let decoded_text = await send_http(url);
+    Debug.print("result "#decoded_text);
+    var isValid = Text.contains(decoded_text,#text ":true");
+    if (isValid){
+       //let res = await moveCKBTC(amount_);
+      
+      return "USDT transferred";
+      //return true;
+    };
+   
+    decoded_text;
+  };
+
+
+
   private func natToFloat (nat_ : Nat ) : Float {
     let toNat64_ = Nat64.fromNat(nat_);
     let toInt64_ = Int64.fromNat64(toNat64_);
@@ -410,10 +502,18 @@ shared ({ caller = owner }) actor class Miner({
   };
 
   public query(message) func getMinerData() : async T.MinerData {
+    Debug.print(Principal.toText(message.caller)#" being checked");
+    assert(_isAddressVerified(message.caller));
+    //Debug.print(Principal.toText(message.caller)#" is exist");
     let miners_ = getMiner(message.caller);
+    
     let miner_ = miners_[0];
+    //Debug.print("fetched "#Nat.toText(miner_.id));
+    Debug.print("number of Miner detected for "#Principal.toText(message.caller)#" "#Nat.toText(miner_.id));
     let status_ = minerStatus.get(miner_.id);
+    Debug.print("fetched next "#Nat.toText(miner_.id));
     let reward_ = minerRewards.get(miner_.id);
+    Debug.print("fetched 2");
     let minerData : T.MinerData = {
         id  = miner_.id;
         walletAddress = miner_.walletAddress;
@@ -426,6 +526,7 @@ shared ({ caller = owner }) actor class Miner({
         available = reward_.available;
         claimed = reward_.claimed;
     };
+    Debug.print("fetched 3");
     minerData;
   };
 
@@ -594,6 +695,14 @@ shared ({ caller = owner }) actor class Miner({
         ];
     };
     transformed;
+    
   };
+
+
+  
+
+  func generateUUID() : Text {
+    "UUID-123456789";
+  }
 
 };

@@ -62,11 +62,11 @@ shared ({ caller = owner }) actor class VeloController({
   var history = Buffer.Buffer<T.TransactionHistory>(0);
 
   //@dev upgrade array buffers
-  var miningContractsBuffer_ : [T.MiningContract] = [];
-  var miningRewardsBuffer_ : [T.MiningReward]=[];
-  var lokaNFTsBuffer_ : [T.LokaNFT]=[];
-  var miningSitesBuffer_ : [T.MiningSite]=[];
-  var historyBuffer_ : [T.TransactionHistory]=[];
+  stable var miningContractsBuffer_ : [T.MiningContract] = [];
+  stable var miningRewardsBuffer_ : [T.MiningReward]=[];
+  stable var lokaNFTsBuffer_ : [T.LokaNFT]=[];
+  stable var miningSitesBuffer_ : [T.MiningSite]=[];
+  stable var historyBuffer_ : [T.TransactionHistory]=[];
 
   system func preupgrade() {
       miningContractsBuffer_ := Buffer.toArray<T.MiningContract>(miningContracts);
