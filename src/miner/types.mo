@@ -16,7 +16,18 @@ module {
         amount: Nat;
     };
 
-    
+    public type WalletAddress = {
+        name : Text;
+        address : Text;
+        chain : Text;
+        currency : Text;
+    };
+
+    public type BankAddress = {
+        name : Text;
+        accountNumber : Text;
+        bankName : Text;
+    };
 
     public type Duration = {#seconds : Nat; #nanoseconds : Nat};
 
@@ -27,6 +38,8 @@ module {
         var verified : Bool;
         var lastCheckedBalance : Float;
         var totalWithdrawn : Float;
+        var walletAddress : [WalletAddress];
+        var bankAddress : [BankAddress];
     };
     
     public type Miner = {
@@ -53,6 +66,8 @@ module {
         totalWithdrawn : Float;
         available : Float;
         claimed : Float;
+        savedWalletAddress : [WalletAddress];
+        bankAddress : [BankAddress];
      };
 
      public type Timestamp = Nat64;

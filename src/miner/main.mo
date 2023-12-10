@@ -196,7 +196,7 @@ shared ({ caller = owner }) actor class Miner({
 
       miners.add(miner_);
       Debug.print("miner added");
-      minerStatus.add({id = minersIndex; var verified = true; var lastCheckedBalance = 0.0; var totalWithdrawn = 0.0});
+      minerStatus.add({id = minersIndex; var verified = true; var lastCheckedBalance = 0.0; var totalWithdrawn = 0.0; var walletAddress = []; var bankAddress = []});
       minerRewards.add({id = minersIndex; var available = 0.0; var claimed = 0.0});
       minersIndex+=1;
       totalHashrate +=hash_;
@@ -525,9 +525,34 @@ shared ({ caller = owner }) actor class Miner({
         totalWithdrawn = status_.totalWithdrawn;
         available = reward_.available;
         claimed = reward_.claimed;
+        savedWalletAddress = status_.walletAddress;
+        bankAddress = status_.bankAddress;
     };
     Debug.print("fetched 3");
     minerData;
+  };
+
+  public query(message) func saveWalletAddress(name_ : Text, address_ : Text, currency_ : Text, chain_ : Text) : async Bool {
+    
+    let miners_ = getMiner(message.caller);
+    let miner_ = miners_[0];
+    let status_ = minerStatus.get(miner_.id);
+    let isthere = Array.find<T.WalletAddress>(status_.walletAddress, func wallet = wallet.address == address_);
+    assert(isthere==null);
+    let wallet_ : [T.WalletAddress] = [{name = name_; address =address_; currency =currency_; chain =chain_}];
+    status_.walletAddress:=Array.append<T.WalletAddress>(status_.walletAddress,wallet_);
+    true;
+  };
+
+  public query(message) func saveBankAddress(name_ : Text, account_ : Text, bankName_ : Text) : async Bool {
+    let miners_ = getMiner(message.caller);
+    let miner_ = miners_[0];
+    let status_ = minerStatus.get(miner_.id);
+    let isthere = Array.find<T.BankAddress>(status_.bankAddress, func bank = bank.accountNumber == account_);
+    assert(isthere==null);
+    let bank_ : [T.BankAddress] = [{name = name_; accountNumber=account_; bankName = bankName_}];
+    status_.bankAddress:=Array.append<T.BankAddress>(status_.bankAddress,bank_);
+    true;
   };
 
   //need a timer to check balance every 24 hrs
