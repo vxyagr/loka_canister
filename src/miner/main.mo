@@ -19,6 +19,7 @@ import Blob "mo:base/Blob";
 import Cycles "mo:base/ExperimentalCycles";
 import Char "mo:base/Char";
 import { now } = "mo:base/Time";
+import { abs } = "mo:base/Int";
 
 
 import T "types";
@@ -34,16 +35,18 @@ shared ({ caller = owner }) actor class Miner({
   private var siteAdmin : Principal = admin;
   private var dappsKey = "0xSet";
   private stable var totalHashrate = 0;
-  private var totalBalance = 0.0005;
+  private var totalBalance = 0.0000;
   private var totalWithdrawn = 0.0;
+  stable var lastF2poolCheck : Int = 0;
+  var lokaCKBTCVault : Principal = admin; 
 
 
 
   var minerStatus = Buffer.Buffer<T.MinerStatus>(0);
   var miners = Buffer.Buffer<T.Miner>(0);
-  
   var minerRewards = Buffer.Buffer<T.MinerReward>(0);
-  var lokaCKBTCVault : Principal = admin; 
+  
+
   var f2poolKey : Text = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h";
 
 
@@ -72,6 +75,7 @@ shared ({ caller = owner }) actor class Miner({
     totalBalance :=0;
     minersIndex := 0;
     totalWithdrawn :=0;
+    lastF2poolCheck :=0;
   };
 
   func _isAdmin(p : Principal) : Bool {
@@ -190,13 +194,13 @@ shared ({ caller = owner }) actor class Miner({
     
         id = minersIndex;
         walletAddress = wallet;
-        username = f2poolUsername_;
+        var username = f2poolUsername_;
         hashrate = hash_;
       };
 
       miners.add(miner_);
       Debug.print("miner added");
-      minerStatus.add({id = minersIndex; var verified = true; var lastCheckedBalance = 0.0; var totalWithdrawn = 0.0; var walletAddress = []; var bankAddress = []});
+      minerStatus.add({id = minersIndex; var verified = true; var balance = 0.0; var totalWithdrawn = 0.0; var walletAddress = []; var bankAddress = []});
       minerRewards.add({id = minersIndex; var available = 0.0; var claimed = 0.0});
       minersIndex+=1;
       totalHashrate +=hash_;
@@ -208,10 +212,6 @@ shared ({ caller = owner }) actor class Miner({
     
   };
 
-  public query(message) func getMiners() : async [T.Miner] {
-    assert(_isAdmin(message.caller));
-    Buffer.toArray<T.Miner>(miners);
-  };
 
   public query(message) func getBalance() : async Float {
     totalBalance;
@@ -224,6 +224,11 @@ shared ({ caller = owner }) actor class Miner({
      var ckBTCBalance : Nat= (await CKBTC.icrc1_balance_of({owner=Principal.fromActor(this);subaccount=null}));
      ckBTCBalance;
   };
+
+   //public shared(message) func getCKBTCMintAddress() : async Text {
+    // var ckBTCBalance : Nat= (await CKBTC.icrc1_balance_of({owner=Principal.fromActor(this);subaccount=null}));
+     //ckBTCBalance;
+  //};
 
   public shared(message) func sendCKBTC(wallet_ : Text ) : async Bool {
     let wallet : Principal = Principal.fromText(wallet_);
@@ -341,42 +346,12 @@ shared ({ caller = owner }) actor class Miner({
 
 
    let ic : T.IC = actor ("aaaaa-aa");
-
-   let url = "https://api.lokamining.com/transfer?targetAddress="#addr_#"&amount="#usd_;
-   //let url = "https://loka-miners.vercel.app/api/withdraw?targetAddress="#addr_#"&amount="#usd_;
+    let uid_ = addr_#usd_#Int.toText(now());
+   let url = "https://api.lokamining.com/transfer?targetAddress="#addr_#"&amount="#usd_#"id="#uid_;
+   let decoded_text = await send_http(url);
    
-    let request_headers = [
-        { name = "User-Agent"; value = "miner_canister" },
-        { name = "Content-Type"; value = "application/json" },
-        { name = "x-api-key"; value = "2021LokaInfinity" },
-    ];
-   Debug.print("accessing "#url);
-    let transform_context : T.TransformContext = {
-      function = transform;
-      context = Blob.fromArray([]);
-    };
-
-
-    let http_request : T.HttpRequestArgs = {
-        url = url;
-        max_response_bytes = null; //optional for request
-        headers = request_headers;
-        body = null; //optional for request
-        method = #get;
-        transform = ?transform_context;
-    };
-
-    Cycles.add(30_000_000_000);
-
-
-    let http_response : T.HttpResponsePayload = await ic.http_request(http_request);
-     let response_body: Blob = Blob.fromArray(http_response.body);
-    let decoded_text: Text = switch (Text.decodeUtf8(response_body)) {
-        case (null) { "No value returned" };
-        case (?y) { y };
-    };
     Debug.print("result "#decoded_text);
-    var isValid = Text.contains(decoded_text,#text ":true");
+    var isValid = Text.contains(decoded_text,#text "success");
     if (isValid){
        let res = await moveCKBTC(amount_);
       if(res){
@@ -463,14 +438,14 @@ shared ({ caller = owner }) actor class Miner({
   public shared(message) func testUSDT() : async Text {
 
     let id_ = "0xc66fB343f20765CC923b2e79aD8c95FA9ef407fe"#Int.toText(now());
-    let url = "https://api.lokamining.com/transfer?targetAddress=0xc66fB343f20765CC923b2e79aD8c95FA9ef407fe&amount=0.1&id="#id_;
+    let url = "https://api.lokamining.com/transfer?targetAddress=0xafb922cc57E3CD934eFf590Fa8Cfc55B4B7d57e7&amount=0.01&id="#id_;
     let decoded_text = await send_http(url);
     Debug.print("result "#decoded_text);
     var isValid = Text.contains(decoded_text,#text ":true");
     if (isValid){
        //let res = await moveCKBTC(amount_);
       
-      return "USDT transferred";
+      return "USDT transferred "#decoded_text;
       //return true;
     };
    
@@ -521,7 +496,7 @@ shared ({ caller = owner }) actor class Miner({
         username = miner_.username;
         hashrate = miner_.hashrate;
         verified = status_.verified;
-        lastCheckedBalance = status_.lastCheckedBalance;
+        balance = status_.balance;
         totalWithdrawn = status_.totalWithdrawn;
         available = reward_.available;
         claimed = reward_.claimed;
@@ -554,135 +529,93 @@ shared ({ caller = owner }) actor class Miner({
     status_.bankAddress:=Array.append<T.BankAddress>(status_.bankAddress,bank_);
     true;
   };
+func textToFloat(t : Text) : Float {
 
-  //need a timer to check balance every 24 hrs
-  public shared(message) func distributeF2PoolReward() : async Bool {
-   let ic : T.IC = actor ("aaaaa-aa");
-   let url = "https://api.f2pool.com/bitcoin/lokabtc";
-    let request_headers = [
-        { name = "User-Agent"; value = "miner_canister" },
-        { name = "Content-Type"; value = "application/json" },
-        { name = "F2P-API-SECRET"; value = f2poolKey },
-    ];
+    var i : Float = 1;
+    var f : Float = 0;
+    var isDecimal : Bool = false;
 
-    let transform_context : T.TransformContext = {
-      function = transform;
-      context = Blob.fromArray([]);
+    for (c in t.chars()) {
+      if (Char.isDigit(c)) {
+        let charToNat : Nat64 = Nat64.fromNat(Nat32.toNat(Char.toNat32(c) -48));
+        let natToFloat : Float = Float.fromInt64(Int64.fromNat64(charToNat));
+        if (isDecimal) {
+          let n : Float = natToFloat / Float.pow(10, i);
+          f := f + n;
+        } else {
+          f := f * 10 + natToFloat;
+        };
+        i := i + 1;
+      } else {
+        if (Char.equal(c, '.') or Char.equal(c, ',')) {
+          f := f / Float.pow(10, i); // Force decimal
+          f := f * Float.pow(10, i); // Correction
+          isDecimal := true;
+          i := 1;
+        } else {
+          //throw Error.reject("NaN");
+          return 0.0;
+        };
+      };
     };
 
-    // Finally, define the HTTP request.
-
-    let http_request : T.HttpRequestArgs = {
-        url = url;
-        max_response_bytes = null; //optional for request
-        headers = request_headers;
-        body = null; //optional for request
-        method = #get;
-        transform = ?transform_context;
-    };
-
-     Cycles.add(30_000_000_000);
-
-
-    let http_response : T.HttpResponsePayload = await ic.http_request(http_request);
-    let response_body: Blob = Blob.fromArray(http_response.body);
-    let decoded_text: Text = switch (Text.decodeUtf8(response_body)) {
-        case (null) { "No value returned" };
-        case (?y) { y };
-    };
-    Debug.print(decoded_text);
-    true;
+    return f;
   };
 
-  /*public shared(message) func minerCheckin(id_ : Nat, status_ : Bool) : async Float {
 
-    //assert(_isNotVerified(message.caller,uname));
-   let ic : T.IC = actor ("aaaaa-aa");
-   let url = "https://api.f2pool.com/bitcoin/lokabtc";
-    let request_headers = [
-        { name = "User-Agent"; value = "miner_canister" },
-        { name = "Content-Type"; value = "application/json" },
-        { name = "F2P-API-SECRET"; value = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h" },
-    ];
+  //need a timer to check balance every 24 hrs
+  public shared(message) func routine24() : async Bool {
+      let now_ = now();
+      let seconds_ = abs(now_/1000000000)-abs(lastF2poolCheck/1000000000);
+      let daySeconds_ = 3600*24;
+      //if(seconds_ < daySeconds_){return false;};
+      assert(_isAdmin(message.caller));
+      let url = "https://api.lokamining.com/calculatef2poolReward";
+      let hashrateRewards= await send_http(url);
+      distributeMiningRewards(hashrateRewards);
+      Debug.print(hashrateRewards);
+      lastF2poolCheck:=now_;
+      true;
+  };
 
-    let transform_context : T.TransformContext = {
-      function = transform;
-      context = Blob.fromArray([]);
-    };
-
-    // Finally, define the HTTP request.
-
-    let http_request : T.HttpRequestArgs = {
-        url = url;
-        max_response_bytes = null; //optional for request
-        headers = request_headers;
-        body = null; //optional for request
-        method = #get;
-        transform = ?transform_context;
-    };
-
-    Cycles.add(2_000_000_000);
+  func textSplit(word_ : Text, delimiter_ : Char) : [Text]{
+    let hasil = Text.split(word_, #char delimiter_);
+    let wordsArray = Iter.toArray(hasil);
+    return wordsArray;
+    //Debug.print(wordsArray[0]);
+  };
+  
 
 
-    let http_response : T.HttpResponsePayload = await ic.http_request(http_request);
-     let response_body: Blob = Blob.fromArray(http_response.body);
-    let decoded_text: Text = switch (Text.decodeUtf8(response_body)) {
-        case (null) { "No value returned" };
-        case (?y) { y };
-    };
-    let hashText = Nat.toText(hash_);
-    var isValid = Text.contains(decoded_text,#text hashText);
-    
-    100.0
+  func distributeMiningRewards(rewards_ : Text) {
 
-  }; */
-
-
-  func distributeMiningRewards(btcAmount : Nat) {
+    let hashrateRewards = textSplit(rewards_,';');   
     Buffer.iterate<T.Miner>(miners, func (miner) {
-      let reward_ = minerRewards.get(miner.id);
-      
-      
-    });
-    
+      let status_ = minerStatus.get(miner.id);
+      let user_ = miner.username;
+      let isValid = Text.contains(rewards_,#text user_);
+      if(isValid){
+        for (hashrateRewards_ in hashrateRewards.vals()) {
+          let hr_ = textSplit(hashrateRewards_,'/'); 
+          var username = hr_[0];
+          var reward = textToFloat(hr_[1]);
+          if(username == miner.username){
+            status_.balance += reward;
+        };
+      };
+        }else{
+          status_.verified:=false;
+        };
+    });   
   };
 
 
  public shared(message) func verifyMiner(uname : Text, hash_ : Nat) : async Bool {
    assert(_isNotVerified(message.caller,uname));
-   let ic : T.IC = actor ("aaaaa-aa");
    let url = "https://api.f2pool.com/bitcoin/lokabtc/"#uname#"-lokabtc";
-    let request_headers = [
-        { name = "User-Agent"; value = "miner_canister" },
-        { name = "Content-Type"; value = "application/json" },
-        { name = "F2P-API-SECRET"; value = f2poolKey },
-    ];
 
-    let transform_context : T.TransformContext = {
-      function = transform;
-      context = Blob.fromArray([]);
-    };
-
-    // Finally, define the HTTP request.
-
-    let http_request : T.HttpRequestArgs = {
-        url = url;
-        max_response_bytes = null; //optional for request
-        headers = request_headers;
-        body = null; //optional for request
-        method = #get;
-        transform = ?transform_context;
-    };
-
-     Cycles.add(30_000_000_000);
-
-
-    let http_response : T.HttpResponsePayload = await ic.http_request(http_request);
-     let response_body: Blob = Blob.fromArray(http_response.body);
-    let decoded_text: Text = switch (Text.decodeUtf8(response_body)) {
-        case (null) { "No value returned" };
-        case (?y) { y };
-    };
+   let decoded_text = await send_http(url);
+   
     let hashText = Nat.toText(hash_);
     var isValid = Text.contains(decoded_text,#text hashText);
     if(isValid){
@@ -692,11 +625,13 @@ shared ({ caller = owner }) actor class Miner({
 
   };
 
-  public shared(message) func unverifySelf() : async Bool {
-    let miners_ = getMiner(message.caller);
+  func removeMiner(p_ : Principal) : async Bool {
+    let miners_ = getMiner(p_);
     let miner_ = miners_[0];
     var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
     minerStatus_.verified:=false;
+    miner_.username:="";
+
     true;
   };
 

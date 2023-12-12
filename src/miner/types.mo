@@ -36,7 +36,7 @@ module {
     public type MinerStatus = {
         id : Nat;
         var verified : Bool;
-        var lastCheckedBalance : Float;
+        var balance : Float;
         var totalWithdrawn : Float;
         var walletAddress : [WalletAddress];
         var bankAddress : [BankAddress];
@@ -45,7 +45,7 @@ module {
     public type Miner = {
         id : Nat;
         walletAddress : Principal;
-        username : Text;
+        var username : Text;
         hashrate : Nat;
      };
 
@@ -62,7 +62,7 @@ module {
         username : Text;
         hashrate : Nat;
         verified : Bool;
-        lastCheckedBalance : Float;
+        balance : Float;
         totalWithdrawn : Float;
         available : Float;
         claimed : Float;
