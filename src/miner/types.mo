@@ -10,16 +10,18 @@ module {
 
     public type TransactionHistory = {
         id: Nat;
-        caller: Text;
-        time : Time.Time;
+        //caller: Text;
+        time : Int;
         action: Text;
-        amount: Nat;
+        amount: Text;
+        txid : Text;
+        currency : Text;
     };
 
     public type WalletAddress = {
         name : Text;
         address : Text;
-        chain : Text;
+        
         currency : Text;
     };
 
@@ -36,10 +38,11 @@ module {
     public type MinerStatus = {
         id : Nat;
         var verified : Bool;
-        var balance : Float;
-        var totalWithdrawn : Float;
+        var balance : Nat;
+        var totalWithdrawn : Nat;
         var walletAddress : [WalletAddress];
         var bankAddress : [BankAddress];
+        var transactions : [TransactionHistory];
     };
     
     public type Miner = {
@@ -49,11 +52,11 @@ module {
         hashrate : Nat;
      };
 
-     public type MinerReward = {
+     /*public type MinerReward = {
         id : Nat;
         var available : Float;
         var claimed : Float;
-     };
+     };*/
 
     public type MinerData = {
         id : Nat;
@@ -62,10 +65,9 @@ module {
         username : Text;
         hashrate : Nat;
         verified : Bool;
-        balance : Float;
-        totalWithdrawn : Float;
-        available : Float;
-        claimed : Float;
+        balance : Nat;
+        totalWithdrawn : Nat;
+     
         savedWalletAddress : [WalletAddress];
         bankAddress : [BankAddress];
      };
