@@ -234,8 +234,10 @@ put some LBTC token to represent bitcoin mining rewards to your controller
 
 ```bash
 $ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"7elv3-kqaaa-aaaam-ab2eq-cai\";};  amount = 10_000_000_000;})"
-
+ rg2ah-xl6x4-z6svw-bdxfv-klmal-cwfel-cfgzg-eoi6q-nszv5-7z5hg-sqe
 ```
+
+dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"gq3rs-huaaa-aaaaa-qaasa-cai\";};  amount = 100_000_000_000;})"
 
 register the controller to miningSite canister
 

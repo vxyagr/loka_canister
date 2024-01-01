@@ -12,6 +12,42 @@ type Account = record {
     subaccount : opt Subaccount;
 };
 
+type Allowance = record { allowance : nat; expires_at : opt Timestamp };
+type AllowanceArgs = record { account : Account; spender : Account };
+type Approve = record {
+  fee : opt nat;
+  from : Account;
+  memo : opt blob;
+  created_at_time : opt Timestamp;
+  amount : nat;
+  expected_allowance : opt nat;
+  expires_at : opt Timestamp;
+  spender : Account;
+};
+type ApproveArgs = record {
+  fee : opt nat;
+  memo : opt blob;
+  from_subaccount : opt blob;
+  created_at_time : opt Timestamp;
+  amount : nat;
+  expected_allowance : opt nat;
+  expires_at : opt Timestamp;
+  spender : Account;
+};
+type ApproveError = variant {
+  GenericError : record { message : text; error_code : nat };
+  TemporarilyUnavailable;
+  Duplicate : record { duplicate_of : BlockIndex };
+  BadFee : record { expected_fee : nat };
+  AllowanceChanged : record { current_allowance : nat };
+  CreatedInFuture : record { ledger_time : Timestamp };
+  TooOld;
+  Expired : record { ledger_time : Timestamp };
+  InsufficientFunds : record { balance : nat };
+};
+type ApproveResult = variant { Ok : BlockIndex; Err : ApproveError };
+
+
 type TransferArg = record {
     from_subaccount : opt Subaccount;
     to : Account;
@@ -259,6 +295,33 @@ type DataCertificate = record {
     hash_tree : blob;
 };
 
+type TransferFromArgs = record {
+    spender_subaccount : opt Subaccount;
+    from : Account;
+    to : Account;
+    amount : Tokens;
+    fee : opt Tokens;
+    memo : opt blob;
+    created_at_time: opt Timestamp;
+};
+
+type TransferFromResult = variant {
+    Ok : BlockIndex;
+    Err : TransferFromError;
+};
+
+type TransferFromError = variant {
+    BadFee : record { expected_fee : Tokens };
+    BadBurn : record { min_burn_amount : Tokens };
+    InsufficientFunds : record { balance : Tokens };
+    InsufficientAllowance : record { allowance : Tokens };
+    TooOld;
+    CreatedInFuture : record { ledger_time : Timestamp };
+    Duplicate : record { duplicate_of : BlockIndex };
+    TemporarilyUnavailable;
+    GenericError : record { error_code : nat; message : text };
+};
+
 service : {
     icrc1_name : () -> (text) query;
     icrc1_symbol : () -> (text) query;
@@ -273,4 +336,7 @@ service : {
     get_transactions : (GetTransactionsRequest) -> (GetTransactionsResponse) query;
     get_blocks : (GetBlocksArgs) -> (GetBlocksResponse) query;  
     get_data_certificate : () -> (DataCertificate) query;    
+     icrc2_approve : (ApproveArgs) -> (ApproveResult);
+    icrc2_allowance : (AllowanceArgs) -> (Allowance) query;
+    icrc2_transfer_from : (TransferFromArgs) -> (TransferFromResult);
 }

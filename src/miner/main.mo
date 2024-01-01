@@ -24,29 +24,33 @@ import { abs } = "mo:base/Int";
 
 import T "types";
 import CKBTC "canister:ckbtc_ledger";
+import LBTC "canister:lbtc";
 
 shared ({ caller = owner }) actor class Miner({
   admin: Principal
 }) =this{
   //indexes
+  
+  private var totalConsumedHashrate = 0;
+  private var siteAdmin : Principal = admin;
+  private var dappsKey = "0xSet";
+  
+  private var totalBalance = 0;
+  private var totalWithdrawn = 0;
+  
+  var lokaCKBTCVault : Principal = admin; 
+
+  //stables
   private stable var minersIndex = 0;
   private stable var transactionIndex = 0;
 
   private stable var pause = false : Bool;
-  private var totalConsumedHashrate = 0;
-  private var siteAdmin : Principal = admin;
-  private var dappsKey = "0xSet";
   private stable var totalHashrate = 0;
-  private var totalBalance = 0;
-  private var totalWithdrawn = 0;
   stable var lastF2poolCheck : Int = 0;
-  var lokaCKBTCVault : Principal = admin; 
-
-
+  private stable var minerCKBTCVault : Principal = admin;
 
   var minerStatus = Buffer.Buffer<T.MinerStatus>(0);
   var miners = Buffer.Buffer<T.Miner>(0);
-  //var minerRewards = Buffer.Buffer<T.MinerReward>(0);
   var transactions = Buffer.Buffer<T.TransactionHistory>(0);
   
 
@@ -56,25 +60,25 @@ shared ({ caller = owner }) actor class Miner({
   //upgrade temp params
   stable var minerStatus_ : [T.MinerStatus]= []; // for upgrade
   stable var miners_ : [T.Miner]= []; // for upgrade 
-  //stable var minerRewards_ : [T.MinerReward]=[];
+
 
   system func preupgrade() {
         miners_ := Buffer.toArray<T.Miner>(miners);
         minerStatus_ := Buffer.toArray<T.MinerStatus>(minerStatus);
-        //minerRewards_ := Buffer.toArray<T.MinerReward>(minerRewards);
+
      
   };
   system func postupgrade() {
         miners := Buffer.fromArray<T.Miner>(miners_); 
         minerStatus:= Buffer.fromArray<(T.MinerStatus)>(minerStatus_);
-        //minerRewards := Buffer.fromArray<T.MinerReward>(minerRewards_);
+
   };
 
   public shared(message) func clearData() : async (){
     assert(_isAdmin(message.caller));
     minerStatus := Buffer.Buffer<T.MinerStatus>(0);
     miners := Buffer.Buffer<T.Miner>(0);
-    //minerRewards := Buffer.Buffer<T.MinerReward>(0);
+
     totalBalance :=0;
     minersIndex := 0;
     totalWithdrawn :=0;
@@ -106,7 +110,14 @@ shared ({ caller = owner }) actor class Miner({
     vault_;
   };
 
-  public query(message) func getIndex() : async Nat {
+  public shared(message) func setMinerCKBTCVault(vault_ : Principal) : async Principal {
+    assert(_isAdmin(message.caller));
+    minerCKBTCVault := vault_;
+    vault_;
+  };
+
+
+  public query(message) func getCurrentIndex() : async Nat {
     minersIndex;
   };
 
@@ -287,10 +298,11 @@ shared ({ caller = owner }) actor class Miner({
     let miners_ = getMiner(message.caller);
     let miner_ = miners_[0];
     var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
+    assert(minerStatus_.balance > amount_);
 
 
     
-    let transferResult = await CKBTC.icrc1_transfer({
+    /*let transferResult = await CKBTC.icrc1_transfer({
       amount = amountNat_;
       fee = ?10;
       created_at_time = null;
@@ -305,13 +317,63 @@ shared ({ caller = owner }) actor class Miner({
         totalBalance-=amount_;
         totalWithdrawn+=amount_;
         logTransaction(miner_.id,"withdraw CKBTC", Nat.toText(amount_), Int.toText(number), "CKBTC");
+        return true;
       };
-      case (#Err(msg)) {res:=0;};
+      case (#Err(msg)) {return false};
+    };
+    */
+
+     let transferResult = await CKBTC.icrc2_transfer_from({
+      from = {owner=minerCKBTCVault; subaccount=null};
+      amount = amount_;
+      fee = null;
+      created_at_time = null;
+      from_subaccount=null;
+      to = {owner=Principal.fromActor(this); subaccount=null};
+      spender_subaccount=null;
+      memo = null;
+    });
+    var res = 0;
+    switch (transferResult)  {
+      case (#Ok(number)) {
+         /*let transferResult = await LBTC.icrc1_transfer({
+          amount = amount_;
+          fee = null;
+          created_at_time = null;
+          from_subaccount=null;
+          to = {owner=message.caller; subaccount=null};
+          memo = null;
+          }); */
+          return true;
+      };
+      case (#Err(msg)) {
+
+        Debug.print("transfer error  ");
+        switch (msg){
+          case (#BadFee(number)){
+            Debug.print("Bad Fee");
+          };
+          case (#GenericError(number)){
+            Debug.print("err "#number.message);
+          };
+          case (#InsufficientFunds(number)){
+            Debug.print("insufficient funds");
+            return false;
+          };
+          case _ {
+            Debug.print("err");
+          }
+        };
+        res:=0;
+        };
     };
     
-    
 
-    true;
+    false;
+  };
+
+  public query(message) func whoCall() : async Text {
+    return Principal.toText(message.caller);
   };
 
   func logTransaction(id_ : Nat,action_: Text, amount_: Text, txid_ : Text, currency_ : Text){
@@ -415,7 +477,7 @@ shared ({ caller = owner }) actor class Miner({
 
     let amountNat_ : Nat = amount_;
     
-    let transferResult = await CKBTC.icrc1_transfer({
+    /*let transferResult = await CKBTC.icrc1_transfer({
       amount = amountNat_;
       fee = ?10;
       created_at_time = null;
@@ -429,10 +491,89 @@ shared ({ caller = owner }) actor class Miner({
         return true;
       };
       case (#Err(msg)) {return false;};
+    }; */
+
+
+    let transferResult = await CKBTC.icrc2_transfer_from({
+      from = {owner=minerCKBTCVault; subaccount=null};
+      amount = amount_;
+      fee = null;
+      created_at_time = null;
+      from_subaccount=null;
+      to = {owner=lokaCKBTCVault; subaccount=null};
+      spender_subaccount=null;
+      memo = null;
+    });
+    var res = 0;
+    switch (transferResult)  {
+      case (#Ok(number)) {
+         return true;
+      };
+      case (#Err(msg)) {
+
+        Debug.print("transfer error  ");
+        switch (msg){
+          case (#BadFee(number)){
+            Debug.print("Bad Fee");
+          };
+          case (#GenericError(number)){
+            Debug.print("err "#number.message);
+          };
+          case (#InsufficientFunds(number)){
+            Debug.print("insufficient funds");
+            return false;
+          };
+          case _ {
+            Debug.print("err");
+          }
+        };
+        res:=0;
+        };
     };
 
 
     false;
+  };
+
+  public shared func getHash(amount_ : Nat) : async Nat {
+    assert(_isNotPaused());
+
+    let amountNat_ : Nat = amount_;
+    
+    let transferResult = await LBTC.icrc1_transfer({
+      amount = amountNat_;
+      fee = ?0;
+      created_at_time = null;
+      from_subaccount=null;
+      to = {owner=Principal.fromText("2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae"); subaccount=null};
+      memo = null;
+    });
+    var res = 0;
+    switch (transferResult)  {
+      case (#Ok(number)) {
+        return number;
+      };
+      case (#Err(msg)) {Debug.print("transfer error  ");
+        switch (msg){
+          case (#BadFee(number)){
+            Debug.print("Bad Fee");
+          };
+          case (#GenericError(number)){
+            Debug.print("err "#number.message);
+          };
+          case (#InsufficientFunds(number)){
+            Debug.print("insufficient funds");
+            return 1;
+          };
+          case _ {
+            Debug.print("err");
+          }
+        };
+        res:=0;};
+    };
+
+
+    0;
   };
 
 
@@ -520,18 +661,18 @@ shared ({ caller = owner }) actor class Miner({
   };
 
   public query(message) func getMinerData() : async T.MinerData {
-    Debug.print(Principal.toText(message.caller)#" being checked");
+    //Debug.print(Principal.toText(message.caller)#" being checked");
     assert(_isAddressVerified(message.caller));
     //Debug.print(Principal.toText(message.caller)#" is exist");
     let miners_ = getMiner(message.caller);
     
     let miner_ = miners_[0];
     //Debug.print("fetched "#Nat.toText(miner_.id));
-    Debug.print("number of Miner detected for "#Principal.toText(message.caller)#" "#Nat.toText(miner_.id));
+    //Debug.print("number of Miner detected for "#Principal.toText(message.caller)#" "#Nat.toText(miner_.id));
     let status_ = minerStatus.get(miner_.id);
-    Debug.print("fetched next "#Nat.toText(miner_.id));
+    //Debug.print("fetched next "#Nat.toText(miner_.id));
     //let reward_ = minerRewards.get(miner_.id);
-    Debug.print("fetched 2");
+    //Debug.print("fetched 2");
     let minerData : T.MinerData = {
         id  = miner_.id;
         walletAddress = miner_.walletAddress;
@@ -545,7 +686,7 @@ shared ({ caller = owner }) actor class Miner({
         savedWalletAddress = status_.walletAddress;
         bankAddress = status_.bankAddress;
     };
-    Debug.print("fetched 3");
+    //Debug.print("fetched 3");
     minerData;
   };
 
@@ -578,7 +719,8 @@ shared ({ caller = owner }) actor class Miner({
     status_.bankAddress:=Array.append<T.BankAddress>(status_.bankAddress,bank_);
     true;
   };
-func textToFloat(t : Text) : Float {
+
+  func textToFloat(t : Text) : Float {
 
     var i : Float = 1;
     var f : Float = 0;
@@ -611,9 +753,7 @@ func textToFloat(t : Text) : Float {
     return f;
   };
 
-  func hello(){
-
-  };
+  
   //need a timer to check balance every 24 hrs
   public shared(message) func routine24() : async Text {
       assert(_isAdmin(message.caller));
@@ -623,8 +763,8 @@ func textToFloat(t : Text) : Float {
       //if(seconds_ < daySeconds_){return "false";};
      // assert(_isAdmin(message.caller));
       let url = "https://api.lokamining.com/calculatef2poolReward";
-      //let hashrateRewards= await send_http(url);
-      let hashrateRewards = "rantai1-lokabtc/0.0135669;rantai2-lokabtc/0.0136183;";
+      let hashrateRewards= await send_http(url);
+      //let hashrateRewards = "rantai1-lokabtc/1361772;rantai2-lokabtc/1356752;";
       distributeMiningRewards(hashrateRewards);
       Debug.print(hashrateRewards);
       lastF2poolCheck:=now_;
@@ -644,10 +784,6 @@ func textToFloat(t : Text) : Float {
 
     let hashrateRewards = textSplit(rewards_,';');   
     Buffer.iterate<T.Miner>(miners, func (miner) {
-     // Debug.print("try "#Nat.toText(miner.id));
-      
-      //Debug.print("get "#Nat.toText(minerStatus.size()));
-      //return ;
       let status_ = minerStatus.get(miner.id);
       
       let user_ = miner.username;
@@ -659,11 +795,11 @@ func textToFloat(t : Text) : Float {
             Debug.print("split "#hashrateRewards_);
             let hr_ = textSplit(hashrateRewards_,'/'); 
             var username = hr_[0];
-            var reward = textToFloat(hr_[1]);
+            var reward = textToNat(hr_[1]);
             Debug.print("miner username : "#username#" "#miner.username);
             if(username == miner.username#"-lokabtc"){
-              Debug.print("distributing "#Float.toText(reward));
-              //status_.balance += reward;
+              Debug.print("distributing "#Nat.toText(reward));
+              status_.balance += reward;
             };
           };
       };

@@ -227,7 +227,7 @@ type GetBlocksResponse = record {
     // If the chain length is positive, the index of the last block is `chain_len - 1`.
     chain_length : nat64;
 
-    // System certificate for the hash of the latest block in the chain.
+    // System certificate for the  of the latest block in the chain.
     // Only present if `get_blocks` is called in a non-replicated query context.
     certificate : opt blob;
 
