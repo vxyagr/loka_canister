@@ -809,6 +809,10 @@ shared ({ caller = owner }) actor class Miner({
     });   
   };
 
+ /*public shared withdrawIDR {
+  
+ }
+ */
 
  public shared(message) func verifyMiner(uname : Text, hash_ : Nat) : async Bool {
    assert(_isNotVerified(message.caller,uname));
