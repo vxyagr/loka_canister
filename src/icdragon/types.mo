@@ -41,13 +41,33 @@ module {
         
     };
 
+    public type CurrentGame = {
+        id: Nat;
+        winner : Principal;
+        time_created : Int;
+        time_ended : Int;
+        reward : Nat;
+        bets : [Bet];
+        
+    };
+
     public type TicketPurchase = {
         id:Nat;
         walletAddress : ?Principal;
         time : Int;
         quantity:Nat;
         totalPrice:Nat;
-        var paid:Bool;
+        var icp_index : Nat;
+
+    };
+
+    public type PaidTicketPurchase = {
+        id:Nat;
+        walletAddress : ?Principal;
+        time : Int;
+        quantity:Nat;
+        totalPrice:Nat;
+        icp_index:Nat;
     };
 
     public type DiceResult = {
@@ -70,10 +90,10 @@ module {
     };
 
     public type User = {
-        wallet : Principal;
+        walletAddress : Principal;
         claimableReward : Nat;
         claimHistory : [ClaimHistory];
-        purchaseHistory : [TicketPurchase];
+        purchaseHistory : [PaidTicketPurchase];
         gameHistory : [Bet];
         availableDiceRoll : Nat;
     };

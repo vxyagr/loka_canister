@@ -690,6 +690,28 @@ shared ({ caller = owner }) actor class Miner({
     minerData;
   };
 
+
+  public query(message) func getMinerDataTest() : async T.MinerData {
+   let wallet_ : [T.WalletAddress] = [{name = "wallet_example"; address ="123-123-123-123-123-123"; currency ="ckBTC";}];
+   let bank_ : [T.BankAddress] = [{name = "my_BCA"; accountNumber="1234567"; bankName = "BCA"}];
+    let minerData : T.MinerData = {
+        id  = 0;
+        walletAddress = message.caller;
+        walletAddressText = Principal.toText(message.caller);
+        username = "rantai1";
+        hashrate = 70;
+        verified = true;
+        balance = 500000;
+        totalWithdrawn = 700000;
+  
+        savedWalletAddress = wallet_;
+        bankAddress = bank_;
+    };
+    //Debug.print("fetched 3");
+    minerData;
+  };
+
+
   public query(message) func getWallets(id_ : Nat) : async [T.WalletAddress]{
     
     let miner_ = minerStatus.get(id_);
