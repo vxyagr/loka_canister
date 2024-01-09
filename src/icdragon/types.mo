@@ -22,10 +22,7 @@ module {
 
 
     public type ClaimHistory = {
-        id : Nat;
-        name : Text;
         time : Int;
-        game_id : Nat;
         icp_transfer_index : Nat;
         reward_claimed : Nat;
     };
@@ -34,11 +31,20 @@ module {
     public type Game = {
         id: Nat;
         var winner : Principal;
+        var totalBet : Nat;
         time_created : Int;
         var time_ended : Int;
         var reward : Nat;
         var bets : [Bet];
+        var bonus : Nat;
+        var bonus_claimed : Bool;
+        var bonus_winner : Principal;
         
+    };
+
+    public type GameBonus = {
+        id : Nat;
+        bonus : Nat;
     };
 
     public type CurrentGame = {
@@ -48,6 +54,7 @@ module {
         time_ended : Int;
         reward : Nat;
         bets : [Bet];
+        bonus : Nat;
         
     };
 
@@ -95,6 +102,7 @@ module {
         claimHistory : [ClaimHistory];
         purchaseHistory : [PaidTicketPurchase];
         gameHistory : [Bet];
+        claimableBonus : [GameBonus];
         availableDiceRoll : Nat;
     };
     

@@ -30,7 +30,7 @@ import Eyes "canister:eyes";
 //import CKBTC "canister:ckbtc_ledger";
 //import LBTC "canister:lbtc";
 
-shared ({ caller = owner }) actor class Miner({
+shared ({ caller = owner }) actor class ICDragon({
   admin: Principal
 }) =this{
   //indexes
@@ -54,12 +54,15 @@ shared ({ caller = owner }) actor class Miner({
   private stable var eyesToken = false;
   private stable var eyesTokenDistribution = 10000000;
   private stable var eyesDays = 0;
+  private stable var initialReward = 50000000;
+  private stable var initialBonus = 5000000;
 
   private var userTicketQuantityHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
   private var userTicketPurchaseHash = HashMap.HashMap<Text, [T.PaidTicketPurchase]>(0, Text.equal, Text.hash);
   private var userClaimableHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
   private var userClaimHistoryHash = HashMap.HashMap<Text, [T.ClaimHistory]>(0, Text.equal, Text.hash);
   private var userBetHistoryHash = HashMap.HashMap<Text, [T.Bet]>(0, Text.equal, Text.hash);
+  var bonusPoolbyWallet = HashMap.HashMap<Text, [Nat]>(0, Text.equal, Text.hash);
 
   //@dev--variables and history
   var games = Buffer.Buffer<T.Game>(0);
@@ -77,6 +80,8 @@ shared ({ caller = owner }) actor class Miner({
   stable var userClaimableHash_ : [(Text, Nat)] = [];
   stable var userClaimHistoryHash_ : [(Text, [T.ClaimHistory])] = [];
   stable var userBetHistoryHash_ : [(Text,[T.Bet])]=[];
+
+  stable var bonusPoolbyWallet_ : [(Text,[Nat])]=[];
   //stable var transactionHash
 
 
@@ -189,17 +194,32 @@ shared ({ caller = owner }) actor class Miner({
   public query(message) func getDevPool() : async Principal {
     devPool;
   };
-   public shared(message) func setTicketPrice(price_ : Nat) : async Nat {
+
+  public query(message) func getRewardPool() : async Principal {
+    rewardPool;
+  };
+
+  public query(message) func getTicketPrice() : async Nat {
+    ticketPrice;
+  };
+  
+  public shared(message) func setTicketPrice(price_ : Nat) : async Nat {
     assert(_isAdmin(message.caller));
     ticketPrice := price_ ;
     ticketPrice;
+  };
+
+  public shared(message) func setAdmin(admin_ : Principal) : async Principal {
+    assert(_isAdmin(message.caller));
+    siteAdmin := admin_ ;
+    siteAdmin;
   };
 
   public query(message) func getCurrentIndex() : async Nat {
     gameIndex;
   };
 
-  public query(message) func getUserData() : async T.User{
+  public shared(message) func getUserData() : async T.User{
     var claimHistory_ = userClaimHistoryHash.get(Principal.toText(message.caller));
     var claimHistory : [T.ClaimHistory] = [];
     switch(claimHistory_){
@@ -227,7 +247,7 @@ shared ({ caller = owner }) actor class Miner({
         purchase := p;
       };
       case (null){
-        Debug.print("no purchase yet"); 
+        //Debug.print("no purchase yet"); 
       }
     };
     var bets_ = userBetHistoryHash.get(Principal.toText(message.caller));
@@ -237,7 +257,7 @@ shared ({ caller = owner }) actor class Miner({
         bets := b;
       };
       case (null){
-        Debug.print("no bet yet"); 
+        //Debug.print("no bet yet"); 
       }
     };
     var remaining : Nat= 0;
@@ -250,7 +270,7 @@ shared ({ caller = owner }) actor class Miner({
         userTicketQuantityHash.put(Principal.toText(message.caller),0);
       };
     };
-
+   
 
     let userData_ : T.User = {
       walletAddress = message.caller; 
@@ -259,9 +279,43 @@ shared ({ caller = owner }) actor class Miner({
       purchaseHistory = purchase;
       gameHistory = bets;
       availableDiceRoll = remaining;
+      claimableBonus =  await checkBonusPool(message.caller);
     };
     //return user data
     userData_;
+  };
+
+  public query(message) func checkBonusPool(p_ : Principal) : async [T.GameBonus]{
+    //return game data
+    let listGameBonusId_ = bonusPoolbyWallet.get(Principal.toText(p_));
+    var gameBonus_ : [T.GameBonus] = [];
+    switch (listGameBonusId_) {
+      case (?n) {
+       for (i in n.vals()) {
+          let game_ = games.get(i);
+          if(game_.bonus_claimed==false){
+            let bonus_ : T.GameBonus = {id = i;bonus = game_.bonus;};
+            gameBonus_ := Array.append<T.GameBonus>(gameBonus_, [bonus_]);
+          }
+        };
+        return gameBonus_;
+      };
+      case (null) {
+        return [];
+      };
+    };
+
+    let currentGame_ = games.get(gameIndex);
+    let game_ : T.CurrentGame = {
+           bets = currentGame_.bets;
+           id = currentGame_.id;
+           reward = currentGame_.reward;
+           time_created =currentGame_.time_created;
+           time_ended =currentGame_.time_ended;
+           winner = currentGame_.winner;
+           bonus = currentGame_.bonus;
+         };
+    [];
   };
 
   public query(message) func getCurrentGame() : async T.CurrentGame{
@@ -274,6 +328,7 @@ shared ({ caller = owner }) actor class Miner({
            time_created =currentGame_.time_created;
            time_ended =currentGame_.time_ended;
            winner = currentGame_.winner;
+           bonus = currentGame_.bonus;
          };
     game_;
   };
@@ -338,7 +393,7 @@ shared ({ caller = owner }) actor class Miner({
     assert(gameIndex==0);
     assert(firstGameStarted==false);
     Debug.print("Starting new game ");
-    let newGame : T.Game = {id = gameIndex; var winner = siteAdmin; time_created = now(); var time_ended=0; var reward=0; var bets = []};
+    let newGame : T.Game = {id = gameIndex; var totalBet = 0; var winner = siteAdmin; time_created = now(); var time_ended=0; var reward=initialReward; var bets = []; var bonus=initialBonus; var bonus_winner=siteAdmin; var bonus_claimed=false;};
     games.add(newGame);
     firstGameStarted:=true;
     let allgame = games.size();
@@ -347,7 +402,7 @@ shared ({ caller = owner }) actor class Miner({
 
   func startNewGame(){
     gameIndex +=1;
-    let newGame : T.Game = {id = gameIndex; var winner = siteAdmin; time_created = now(); var time_ended=0; var reward=0; var bets = []};
+    let newGame : T.Game = {id = gameIndex; var totalBet = 0;var winner = siteAdmin; time_created = now(); var time_ended=0; var reward=initialReward; var bets = [];var bonus=initialBonus; var bonus_winner=siteAdmin; var bonus_claimed=false;};
     games.add(newGame);
   };
 
@@ -441,13 +496,92 @@ shared ({ caller = owner }) actor class Miner({
       return #win;
     };
     //return if lost
-    game_.reward += (ticketPrice/2);
+    game_.reward += (ticketPrice/10)*4;
+    game_.bonus += (ticketPrice/10)*1;
+    if(game_.totalBet < 10){
+      let userBonus_ = bonusPoolbyWallet.get(Principal.toText(message.caller));
+      switch (userBonus_){
+        case(?r){
+          bonusPoolbyWallet.put(Principal.toText(message.caller),Array.append<Nat>(r, [game_.id]));
+        };
+        case(null){
+          bonusPoolbyWallet.put(Principal.toText(message.caller),[game_.id]);
+        }
+      };
+
+    };
     #lose([dice_1_,dice_2_]);
     
   } ;
 
   func log_history(){
 
+  };
+
+  public shared(message) func claimReward(g_ : Nat) : async Bool {
+    let reward_ = userClaimableHash.get(Principal.toText(message.caller));
+    switch (reward_){
+        case(?r){
+          let transferResult_ = await transfer(r,message.caller);
+          switch transferResult_ {
+            case (#success(x)) { 
+              userClaimableHash.put(Principal.toText(message.caller),0);
+              let claimHistory_ : T.ClaimHistory = {time = now(); icp_transfer_index=x; reward_claimed=r};
+              let claimArray_ = userClaimHistoryHash.get(Principal.toText(message.caller));
+              switch (claimArray_){
+                case(?c){
+                  userClaimHistoryHash.put(Principal.toText(message.caller),Array.append<T.ClaimHistory>(c, [claimHistory_]));
+                };
+                case(null){
+                  userClaimHistoryHash.put(Principal.toText(message.caller), [claimHistory_]);
+                }
+              };
+              return true; 
+            };
+            case (#error(txt)) {
+              Debug.print("error "#txt );
+              return false;
+            }
+          };
+        };
+        case(null){
+          return false;
+        }
+      };
+    false;
+  };
+
+  public shared(message) func claimBonusPool(g_ : Nat) : async Bool {
+    let reward_ = userClaimableHash.get(Principal.toText(message.caller));
+    switch (reward_){
+        case(?r){
+          let transferResult_ = await transfer(r,message.caller);
+          switch transferResult_ {
+            case (#success(x)) { 
+              userClaimableHash.put(Principal.toText(message.caller),0);
+              let claimHistory_ : T.ClaimHistory = {time = now(); icp_transfer_index=x; reward_claimed=r};
+              let claimArray_ = userClaimHistoryHash.get(Principal.toText(message.caller));
+              switch (claimArray_){
+                case(?c){
+                  userClaimHistoryHash.put(Principal.toText(message.caller),Array.append<T.ClaimHistory>(c, [claimHistory_]));
+                };
+                case(null){
+                  userClaimHistoryHash.put(Principal.toText(message.caller), [claimHistory_]);
+                }
+              };
+              return true; 
+            };
+            case (#error(txt)) {
+              Debug.print("error "#txt );
+              return false;
+            }
+          };
+        };
+        case(null){
+          return false;
+        }
+      };
+    false;
   };
 
   func transferEyesToken(to_ : Principal,quantity_ : Nat) : async T.TransferResult {
