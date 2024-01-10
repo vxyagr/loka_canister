@@ -318,8 +318,9 @@ shared ({ caller = owner }) actor class ICDragon({
     [];
   };
 
-  public query(message) func getCurrentGame() : async T.CurrentGame{
+  public query(message) func getCurrentGame() : async T.GameCheck{
     //return game data
+    if(firstGameStarted==false) return #none;
     let currentGame_ = games.get(gameIndex);
     let game_ : T.CurrentGame = {
            bets = currentGame_.bets;
@@ -330,7 +331,7 @@ shared ({ caller = owner }) actor class ICDragon({
            winner = currentGame_.winner;
            bonus = currentGame_.bonus;
          };
-    game_;
+    #ok(game_);
   };
 
   public shared(message) func pauseCanister(pause_ : Bool) : async Bool {
@@ -552,30 +553,40 @@ shared ({ caller = owner }) actor class ICDragon({
   };
 
   public shared(message) func claimBonusPool(g_ : Nat) : async Bool {
-    let reward_ = userClaimableHash.get(Principal.toText(message.caller));
-    switch (reward_){
+    //
+    let gameArray_ = bonusPoolbyWallet.get(Principal.toText(message.caller));
+    switch (gameArray_){
         case(?r){
-          let transferResult_ = await transfer(r,message.caller);
-          switch transferResult_ {
-            case (#success(x)) { 
-              userClaimableHash.put(Principal.toText(message.caller),0);
-              let claimHistory_ : T.ClaimHistory = {time = now(); icp_transfer_index=x; reward_claimed=r};
-              let claimArray_ = userClaimHistoryHash.get(Principal.toText(message.caller));
-              switch (claimArray_){
-                case(?c){
-                  userClaimHistoryHash.put(Principal.toText(message.caller),Array.append<T.ClaimHistory>(c, [claimHistory_]));
+          let val_ = Array.find<Nat>(r, func x = x == g_);
+          if(val_ != null){
+            let game_ = games.get(g_);
+            game_.bonus_claimed := true;
+            let transferResult_ = await transfer(game_.bonus,message.caller);
+            switch transferResult_ {
+              case (#success(x)) { 
+                userClaimableHash.put(Principal.toText(message.caller),0);
+                
+                game_.bonus_winner := message.caller;
+                let claimHistory_ : T.ClaimHistory = {time = now(); icp_transfer_index=x; reward_claimed=game_.bonus};
+                let claimArray_ = userClaimHistoryHash.get(Principal.toText(message.caller));
+                switch (claimArray_){
+                  case(?c){
+                    userClaimHistoryHash.put(Principal.toText(message.caller),Array.append<T.ClaimHistory>(c, [claimHistory_]));
+                  };
+                  case(null){
+                    userClaimHistoryHash.put(Principal.toText(message.caller), [claimHistory_]);
+                  }
                 };
-                case(null){
-                  userClaimHistoryHash.put(Principal.toText(message.caller), [claimHistory_]);
-                }
+                return true; 
               };
-              return true; 
+              case (#error(txt)) {
+                Debug.print("error "#txt );
+                game_.bonus_claimed := false;
+                return false;
+              }
             };
-            case (#error(txt)) {
-              Debug.print("error "#txt );
-              return false;
-            }
-          };
+            };
+          
         };
         case(null){
           return false;

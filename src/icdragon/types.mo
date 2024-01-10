@@ -58,6 +58,11 @@ module {
         
     };
 
+    public type GameCheck = {
+        #none;
+        #ok:CurrentGame;
+    };
+
     public type TicketPurchase = {
         id:Nat;
         walletAddress : ?Principal;
