@@ -76,7 +76,11 @@
       "candid": "https://raw.githubusercontent.com/dfinity/ic/d430f7ad0c6384921801a54b37b9f3c55a360c51/rs/rosetta-api/icrc1/ledger/ledger.did",
       "wasm": "https://download.dfinity.systems/ic/d430f7ad0c6384921801a54b37b9f3c55a360c51/canisters/ic-icrc1-ledger.wasm.gz"
     },
-    
+    "icp_test": {
+      "type": "custom",
+      "candid": "https://raw.githubusercontent.com/dfinity/ic/d430f7ad0c6384921801a54b37b9f3c55a360c51/rs/rosetta-api/icrc1/ledger/ledger.did",
+      "wasm": "https://download.dfinity.systems/ic/d430f7ad0c6384921801a54b37b9f3c55a360c51/canisters/ic-icrc1-ledger.wasm.gz"
+    },
     "ckbtc_ledger" : {
       "type" : "custom",
       "candid": "https://raw.githubusercontent.com/dfinity/ic/d430f7ad0c6384921801a54b37b9f3c55a360c51/rs/rosetta-api/icrc1/ledger/ledger.did",

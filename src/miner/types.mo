@@ -29,6 +29,7 @@ module {
         name : Text;
         accountNumber : Text;
         bankName : Text;
+        jwalletId : Text;
     };
 
     public type Duration = {#seconds : Nat; #nanoseconds : Nat};

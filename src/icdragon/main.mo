@@ -26,6 +26,7 @@ import Account = "./account";
 import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
 import T "types";
 import ICPLedger "canister:icp_ledger_canister";
+//import ICPLedger "canister:icp_test";
 import Eyes "canister:eyes";
 //import CKBTC "canister:ckbtc_ledger";
 //import LBTC "canister:lbtc";
@@ -50,12 +51,12 @@ shared ({ caller = owner }) actor class ICDragon({
   private stable var betIndex = 0;
   private stable var ticketIndex = 0;
   private stable var pause = false : Bool;
-  private stable var ticketPrice = 5000000;
+  private stable var ticketPrice =   50000000;
   private stable var eyesToken = false;
   private stable var eyesTokenDistribution = 10000000;
   private stable var eyesDays = 0;
-  private stable var initialReward = 50000000;
-  private stable var initialBonus = 5000000;
+  private stable var initialReward = 500000000;
+  private stable var initialBonus = 50000000;
 
   private var userTicketQuantityHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
   private var userTicketPurchaseHash = HashMap.HashMap<Text, [T.PaidTicketPurchase]>(0, Text.equal, Text.hash);
@@ -653,7 +654,7 @@ shared ({ caller = owner }) actor class ICDragon({
       };
       case (#Err(msg)) {
 
-        Debug.print("transfer error  ");
+        Debug.print("ICP transfer error  ");
         switch (msg){
           case (#BadFee(number)){
             Debug.print("Bad Fee");
@@ -669,15 +670,16 @@ shared ({ caller = owner }) actor class ICDragon({
             
           };
           case _ {
-            Debug.print("err");
+            Debug.print("ICP error err");
           }
         };
-        return #error("Other");
+        return #error("ICP error Other");
         };
     };
   };
 
   func transferFrom(owner_ : Principal, amount_ : Nat) : async T.TransferResult {
+    Debug.print("transferring from "#Principal.toText(owner_)#" by "#Principal.toText(Principal.fromActor(this))#" "#Nat.toText(amount_));
     let transferResult = await ICPLedger.icrc2_transfer_from({
       from = {owner=owner_; subaccount=null};
       amount = amount_;
@@ -703,14 +705,20 @@ shared ({ caller = owner }) actor class ICDragon({
           case (#GenericError(number)){
             return #error("Generic");
           };
+          case (#BadBurn(number)){
+            return #error("BadBurn");
+          };
           case (#InsufficientFunds(number)){
             return #error("Insufficient Funds");
           };
+          case (#InsufficientAllowance(number)){
+            return #error("Insufficient Allowance ");
+          };
           case _ {
-            Debug.print("err");
+            Debug.print("ICP err");
           }
         };
-        return #error("Other");
+        return #error("ICP transfer other error");
         };
     };
   };

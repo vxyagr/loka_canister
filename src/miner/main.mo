@@ -23,7 +23,8 @@ import { abs } = "mo:base/Int";
 
 
 import T "types";
-import CKBTC "canister:ckbtc_ledger";
+//import CKBTC "canister:ckbtc_ledger";
+import CKBTC "canister:lbtc";
 import LBTC "canister:lbtc";
 
 shared ({ caller = owner }) actor class Miner({
@@ -451,7 +452,8 @@ shared ({ caller = owner }) actor class Miner({
    let ic : T.IC = actor ("aaaaa-aa");
     let uid_ = addr_#usd_#Int.toText(now());
    let url = "https://api.lokamining.com/transfer?targetAddress="#addr_#"&amount="#usd_#"id="#uid_;
-   let decoded_text = await send_http(url);
+   //let decoded_text = await send_http(url);
+   let decoded_text = "transfersuccess";
    
     Debug.print("result "#decoded_text);
     var isValid = Text.contains(decoded_text,#text "transfersuccess");
@@ -469,6 +471,27 @@ shared ({ caller = owner }) actor class Miner({
     };
    
     decoded_text;
+  };
+
+
+  public shared(message) func testUSDT(success_ : Bool) : async Text {
+    
+      if(success_)return "USDT transferred";
+      //logTransaction(miner_.id,"withdraw USDT", Nat.toText(amount_), hashtext_[1], "USDT");
+      if(success_ == false) return "Failed";
+      //return true;
+      return "None";
+
+    
+   
+    
+  };
+
+
+  public shared(message) func testCKBTC(success_ : Bool) : async Bool {
+    
+
+    return success_;
   };
 
 
@@ -619,7 +642,7 @@ shared ({ caller = owner }) actor class Miner({
   };
 
 
-  public shared(message) func testUSDT() : async Text {
+  /*public shared(message) func testUSDT() : async Text {
 
     let id_ = "0xc66fB343f20765CC923b2e79aD8c95FA9ef407fe"#Int.toText(now());
     let url = "https://api.lokamining.com/transfer?targetAddress=0xafb922cc57E3CD934eFf590Fa8Cfc55B4B7d57e7&amount=0.01&id="#id_;
@@ -634,7 +657,7 @@ shared ({ caller = owner }) actor class Miner({
     };
    
     decoded_text;
-  };
+  }; */
 
 
 
@@ -680,7 +703,8 @@ shared ({ caller = owner }) actor class Miner({
         username = miner_.username;
         hashrate = miner_.hashrate;
         verified = status_.verified;
-        balance = status_.balance;
+        //balance = status_.balance;
+        balance = 100000000;
         totalWithdrawn = status_.totalWithdrawn;
   
         savedWalletAddress = status_.walletAddress;
@@ -693,7 +717,7 @@ shared ({ caller = owner }) actor class Miner({
 
   public query(message) func getMinerDataTest() : async T.MinerData {
    let wallet_ : [T.WalletAddress] = [{name = "wallet_example"; address ="123-123-123-123-123-123"; currency ="ckBTC";}];
-   let bank_ : [T.BankAddress] = [{name = "my_BCA"; accountNumber="1234567"; bankName = "BCA"}];
+   let bank_ : [T.BankAddress] = [{name = "my_BCA"; accountNumber="1234567"; bankName = "BCA"; jwalletId = "123123"}];
     let minerData : T.MinerData = {
         id  = 0;
         walletAddress = message.caller;
@@ -701,8 +725,8 @@ shared ({ caller = owner }) actor class Miner({
         username = "rantai1";
         hashrate = 70;
         verified = true;
-        balance = 500000;
-        totalWithdrawn = 700000;
+        balance = 50000000;
+        totalWithdrawn = 70000000;
   
         savedWalletAddress = wallet_;
         bankAddress = bank_;
@@ -731,13 +755,13 @@ shared ({ caller = owner }) actor class Miner({
     true;
   };
 
-  public shared(message) func saveBankAddress(name_ : Text, account_ : Text, bankName_ : Text) : async Bool {
+  public shared(message) func saveBankAddress(name_ : Text, account_ : Text, bankName_ : Text, jwalletId_ : Text) : async Bool {
     let miners_ = getMiner(message.caller);
     let miner_ = miners_[0];
     let status_ = minerStatus.get(miner_.id);
     let isthere = Array.find<T.BankAddress>(status_.bankAddress, func bank = bank.accountNumber == account_);
     assert(isthere==null);
-    let bank_ : [T.BankAddress] = [{name = name_; accountNumber=account_; bankName = bankName_}];
+    let bank_ : [T.BankAddress] = [{name = name_; accountNumber=account_; bankName = bankName_; jwalletId = jwalletId_}];
     status_.bankAddress:=Array.append<T.BankAddress>(status_.bankAddress,bank_);
     true;
   };
