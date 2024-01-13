@@ -1,4 +1,3 @@
-// Represents an account on the ckBTC ledger.
 type Account = record { owner : principal; subaccount : opt blob };
 
 type CanisterStatusResponse = record {

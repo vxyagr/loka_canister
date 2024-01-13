@@ -9,10 +9,15 @@
       "type": "motoko",
       "dependencies": ["ckbtc_ledger","lbtc"]
     },
+    "miner_prod": {
+      "main": "src/miner_production/main.mo",
+      "type": "motoko",
+      "dependencies": ["ckbtc_ledger","lbtc","ckbtc_minter"]
+    },
     "icdragon": {
       "main": "src/icdragon/main.mo",
       "type": "motoko",
-      "dependencies":["icp_ledger_canister","eyes"]
+      "dependencies":["icp_ledger_canister"]
     },
     "ckbtc_minter" : {
       "type" : "custom",
@@ -30,6 +35,7 @@
       "candid": "https://raw.githubusercontent.com/dfinity/ic/d430f7ad0c6384921801a54b37b9f3c55a360c51/rs/rosetta-api/icrc1/ledger/ledger.did",
       "wasm": "https://download.dfinity.systems/ic/d430f7ad0c6384921801a54b37b9f3c55a360c51/canisters/ic-icrc1-ledger.wasm.gz",
       "remote": {
+        "candid": "icrc1.public.did",
         "id": {
           "ic": "ryjl3-tyaaa-aaaaa-aaaba-cai"
         }

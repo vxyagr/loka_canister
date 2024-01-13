@@ -24,11 +24,11 @@ import HashMap "mo:base/HashMap";
 import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
 
 import T "types";
-//import Minter "canister:ckbtc_minter";
-//import CKBTC "canister:ckbtc_ledger";
-//import Minter "ic:mqygn-kiaaa-aaaar-qaadq-cai";
-import CKBTC "canister:lbtc";
-//import LBTC "canister:lbtc";
+
+import CKBTC "canister:ckbtc_ledger";
+
+//import CKBTC "canister:lbtc";
+
 
 shared ({ caller = owner }) actor class Miner({
   admin: Principal
@@ -724,9 +724,8 @@ shared ({ caller = owner }) actor class Miner({
    
 
   //@DEV- CORE FUNCTIONS TO CALCULATE 24 HOUR HASHRATE REWARD AND DISTRIBUTE IT PROPORTIONALLLY TO ALL MINERS
- // public shared(message) func routine24() : async Text {
-    private func routine24() : async Text {
-      //assert(_isAdmin(message.caller));
+  public shared(message) func routine24() : async Text {
+      assert(_isAdmin(message.caller));
       let now_ = now();
       let seconds_ = abs(now_/1000000000)-abs(lastF2poolCheck/1000000000);
       let daySeconds_ = 3600*24;
@@ -735,11 +734,8 @@ shared ({ caller = owner }) actor class Miner({
       let url = "https://api.lokamining.com/calculatef2poolReward";
       let hashrateRewards= await send_http(url);
       //let hashrateRewards = "rantai1-lokabtc/1361772;rantai2-lokabtc/1356752;";
-      
-      
-      Debug.print(hashrateRewards);
-     // return hashrateRewards;
       distributeMiningRewards(hashrateRewards);
+      Debug.print(hashrateRewards);
       lastF2poolCheck:=now_;
       hashrateRewards;
   };
@@ -842,9 +838,6 @@ shared ({ caller = owner }) actor class Miner({
   };
 
    var scheduler = ignore recurringTimer(#seconds (24*60*60),  func () : async () {
-    //var scheduler = ignore recurringTimer(#seconds (10),  func () : async () {
-      Debug.print("running 2");
-      let res = await routine24();
       if(timeStarted){
         let res = await routine24();
       };

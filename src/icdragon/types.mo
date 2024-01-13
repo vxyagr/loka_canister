@@ -85,6 +85,7 @@ module {
     public type DiceResult = {
         #win;
         #lose : [Nat8];
+        #extra : [Nat8];
         #closed;
         #noroll;
         #transferFailed : Text;
