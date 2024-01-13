@@ -288,6 +288,16 @@ shared ({ caller = owner }) actor class ICDragon({
         userTicketQuantityHash.put(Principal.toText(message.caller),0);
       };
     };
+    var doubleRollRemaining : Nat= 0;
+    switch (userDoubleRollQuantityHash.get(Principal.toText(message.caller))) {
+      case (?x) {
+        doubleRollRemaining := x;
+      };
+      case (null) {
+        doubleRollRemaining :=0;
+        userDoubleRollQuantityHash.put(Principal.toText(message.caller),0);
+      };
+    };
    
 
     let userData_ : T.User = {
@@ -296,7 +306,7 @@ shared ({ caller = owner }) actor class ICDragon({
       claimHistory = claimHistory;
       purchaseHistory = purchase;
       gameHistory = bets;
-      availableDiceRoll = remaining;
+      availableDiceRoll = remaining + doubleRollRemaining;
       claimableBonus =  await checkBonusPool(message.caller);
     };
     //return user data
@@ -483,7 +493,7 @@ shared ({ caller = owner }) actor class ICDragon({
     
     var extraRoll_ = false;
     //ICP send 50% of ticket price to holder
-    if(doubleRollRemaining_ > 0){
+    if(doubleRollRemaining_ == 0){
       let mt = ticketPrice/2;
       Debug.print("transferring to dev"#Nat.toText(mt));
       let transferResult_ = await transfer(mt,devPool);
@@ -495,13 +505,15 @@ shared ({ caller = owner }) actor class ICDragon({
           return #transferFailed(txt);
         }
       };
+          //substract ticket
       userTicketQuantityHash.put(Principal.toText(message.caller), remaining_-1);
       extraRoll_ :=true;
     }else{
+          //substract ticket
       userDoubleRollQuantityHash.put(Principal.toText(message.caller), doubleRollRemaining_ -1);
     };
     //ROLL!==============================================================================================
-    //substract ticket
+
     
     
     let dice_1_ = await roll();
@@ -510,7 +522,7 @@ shared ({ caller = owner }) actor class ICDragon({
     if(eyesToken and extraRoll_){
       //let res_ = transferEyesToken(message.caller, Nat8.toNat(dice_1_ + dice_2_));
     };
-    Debug.print("result "#Nat8.toText(dice_1_)#" and "#Nat8.toText(dice_2_));
+
     //write bet history to : history variable, user hash, and to game object (thats 3 places)
     let bet_ : T.Bet = {id = betIndex; game_id = gameIndex; dice_1 = dice_1_;dice_2=dice_2_;walletAddress=message.caller;time=now()} ;
     betIndex +=1;
@@ -543,7 +555,7 @@ shared ({ caller = owner }) actor class ICDragon({
       startNewGame();
       return #win;
     };
-    //return if lost
+    //return if lost and detect if win extra roll
     if(extraRoll_){
       
       game_.reward += (ticketPrice/10)*4;
