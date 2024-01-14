@@ -266,7 +266,7 @@ shared ({ caller = owner }) actor class Miner({
      //ckBTCBalance;
   //};
 
-  public shared(message) func sendCKBTC(wallet_ : Text, amount_ : Nat ) : async Bool {
+  public shared(message) func sendCKBTC(wallet_ : Text, subAccount : Text, amount_ : Nat ) : async Bool {
     let wallet : Principal = Principal.fromText(wallet_);
     assert(_isAdmin(message.caller));
     var ckBTCBalance : Nat= (await CKBTC.icrc1_balance_of({owner=Principal.fromActor(this);subaccount=null}));
@@ -277,7 +277,7 @@ shared ({ caller = owner }) actor class Miner({
       amount = amount_;
       fee = ?10;
       created_at_time = null;
-      from_subaccount=null;
+      from_subaccount= null;
       to = {owner=wallet; subaccount=null};
       memo = null;
     });

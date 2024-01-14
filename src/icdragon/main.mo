@@ -16,6 +16,7 @@ import Nat "mo:base/Nat";
 import Hash "mo:base/Hash";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
+//import Tokens "mo:base/Tokens";
 import Result "mo:base/Result";
 import Blob "mo:base/Blob";
 import Cycles "mo:base/ExperimentalCycles";
@@ -25,6 +26,7 @@ import { abs } = "mo:base/Int";
 import Account = "./account";
 import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
 import T "types";
+
 import ICPLedger "canister:icp_ledger_canister";
 //import ICPLedger "canister:icp_test";
 //import Eyes "canister:eyes";
@@ -618,7 +620,7 @@ shared ({ caller = owner }) actor class ICDragon({
     false;
   };
 
-  public shared(message) func claimBonusPool(g_ : Nat) : async Bool {
+  public shared(message) func claimBonusPool(g_ : Nat, p_ : Principal) : async Bool {
     //
     let gameArray_ = bonusPoolbyWallet.get(Principal.toText(message.caller));
     switch (gameArray_){
@@ -702,8 +704,90 @@ shared ({ caller = owner }) actor class ICDragon({
     };
   }; */
 
-  func transfer(amount_ : Nat, to_ : Principal) : async T.TransferResult {
+  public shared(message) func getBalance({te : Blob}) : async  T.Tokens{
+    //let address_blob : Blob = Text.encodeUtf8(t_);
+    //address_blob;
+    let ICPL = actor("ryjl3-tyaaa-aaaaa-aaaba-cai"): actor { account_balance: ({account : Blob}) -> async T.Tokens };
+    let res = await ICPL.account_balance({account = te});
+    //let a = Nat64.toText(res);
+    //Debug.print("aa ")
+    return res;
+  };
 
+   public shared(message) func toText({te : Text}) : async  Blob{
+    //let address_blob : Blob = Text.encodeUtf8(t_);
+    //address_blob;
+    let res = Text.encodeUtf8(te);
+    //let res = Hex.decode(te);
+    return res;
+  };
+
+  //func transfer(amount_ : Nat, to_ : Principal) : async T.TransferResult {
+  public shared(message) func transferICP(amount_ : Nat, to_ : Blob) : async { #Ok : Nat64; #Err : T.TransferError_1 } {
+    assert(_isAdmin(message.caller));
+    /*
+    public type TransferArgs = {
+    to : Blob;
+    fee : Tokens;
+    memo : Nat64;
+    from_subaccount : ?Blob;
+    created_at_time : ?TimeStamp;
+    amount : Tokens;
+  };
+    */
+    //let address_blob : Blob = Text.encodeUtf8(to_);
+    //Debug.print(Text.encodeUtf8(to_));
+
+    //{ to = $(python3 -c 'print("vec{" + ";".join([str(b) for b in bytes.fromhex("'$TO_ACCOUNT'")]) + "}")'); memo = 1:nat64; amount = record {e8s = 200_000_000 }; fee = record { e8s = 10_000 }; }
+
+    let args_ = {to=to_ : Blob; fee ={e8s = 10000:Nat64};memo=1 : Nat64;amount={e8s = Nat64.fromNat(amount_ )};};
+    let ICPL = actor("ryjl3-tyaaa-aaaaa-aaaba-cai"): actor { transfer: (T.ICPTransferArgs) -> async { #Ok : Nat64; #Err : T.TransferError_1 }};
+    let result = await ICPL.transfer(args_); //"(record {subaccount=null;})"
+    
+    result;
+    //false;
+
+    /*let transferResult = await ICPLedger.icrc1_transfer({
+      amount = amount_;
+      fee = null;
+      created_at_time = null;
+      from_subaccount=null;
+      to = {owner=to_; subaccount=null};
+      memo = null;
+    });
+    var res = 0;
+    switch (transferResult)  {
+      case (#Ok(number)) {
+        return #success(number);
+      };
+      case (#Err(msg)) {
+
+        Debug.print("ICP transfer error  ");
+        switch (msg){
+          case (#BadFee(number)){
+            Debug.print("Bad Fee");
+            return #error("Bad Fee");
+          };
+          case (#GenericError(number)){
+            Debug.print("err "#number.message);
+            return #error("Generic");
+          };
+          case (#InsufficientFunds(number)){
+            Debug.print("insufficient funds");
+            return #error("insufficient funds");
+            
+          };
+          case _ {
+            Debug.print("ICP error err");
+          }
+        };
+        return #error("ICP error Other");
+        };
+    }; */
+  };
+
+  func transfer(amount_ : Nat, to_ : Principal) : async T.TransferResult {
+   
     let transferResult = await ICPLedger.icrc1_transfer({
       amount = amount_;
       fee = null;
@@ -740,7 +824,7 @@ shared ({ caller = owner }) actor class ICDragon({
         };
         return #error("ICP error Other");
         };
-    };
+    }; 
   };
 
   func transferFrom(owner_ : Principal, amount_ : Nat) : async T.TransferResult {

@@ -20,6 +20,24 @@ module {
         time : Int;
     };
 
+    public type ICPTransferArgs = {
+
+        to : Blob;
+        fee : {e8s : Nat64};
+        memo : Nat64;
+        ///from_subaccount : Blob;
+        //created_at_time : Nat;
+        amount : {e8s : Nat64};
+    };
+    public type Tokens = { e8s : Nat64 };
+
+    public type TransferError_1 = {
+        #TxTooOld : { allowed_window_nanos : Nat64 };
+        #BadFee : { expected_fee : Tokens };
+        #TxDuplicate : { duplicate_of : Nat64 };
+        #TxCreatedInFuture;
+        #InsufficientFunds : { balance : Tokens };
+    };
 
     public type ClaimHistory = {
         time : Int;
