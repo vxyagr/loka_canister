@@ -225,6 +225,12 @@ shared ({ caller = owner }) actor class ICDragon({
     ticketPrice;
   };
 
+  public shared (message) func setEyesDistribution(initAmount_ : Nat) : async Nat {
+    assert (_isAdmin(message.caller));
+    eyesTokenDistribution := initAmount_;
+    initAmount_;
+  };
+
   public shared (message) func setNextTicketPrice(price_ : Nat) : async Nat {
     assert (_isAdmin(message.caller));
     nextTicketPrice := price_;
