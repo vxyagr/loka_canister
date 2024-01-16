@@ -1,0 +1,69 @@
+public shared(message) func claimReward(g_ : Nat, target_ : Text, targetBlob_ : Blob, targetType_ : Nat) : async Bool {
+    //1 : transfer to principal
+    //2 : transfer to account id
+    let reward_ = userClaimableHash.get(Principal.toText(message.caller));
+    switch (reward_){
+        case(?r){
+          if(targetType_==1){
+            let transferResult_ = await transfer(r,message.caller);
+
+            switch transferResult_ {
+              case (#success(x)) { 
+                userClaimableHash.put(Principal.toText(message.caller),0);
+                let claimHistory_ : T.ClaimHistory = {time = now(); icp_transfer_index=x; reward_claimed=r};
+                let claimArray_ = userClaimHistoryHash.get(Principal.toText(message.caller));
+                switch (claimArray_){
+                  case(?c){
+                    userClaimHistoryHash.put(Principal.toText(message.caller),Array.append<T.ClaimHistory>(c, [claimHistory_]));
+                  };
+                  case(null){
+                    userClaimHistoryHash.put(Principal.toText(message.caller), [claimHistory_]);
+                  }
+                };
+                return true; 
+              };
+              case (#error(txt)) {
+                Debug.print("error "#txt );
+                return false;
+              }
+            };
+          }else{
+            let transferResult_ = await transferICP(r,targetBlob_);
+            switch transferResult_ {
+              case (#Ok(x)) { 
+                userClaimableHash.put(Principal.toText(message.caller),0);
+                let claimHistory_ : T.ClaimHistory = {time = now(); icp_transfer_index=Nat64.toNat(x); reward_claimed=r};
+                let claimArray_ = userClaimHistoryHash.get(Principal.toText(message.caller));
+                switch (claimArray_){
+                  case(?c){
+                    userClaimHistoryHash.put(Principal.toText(message.caller),Array.append<T.ClaimHistory>(c, [claimHistory_]));
+                  };
+                  case(null){
+                    userClaimHistoryHash.put(Principal.toText(message.caller), [claimHistory_]);
+                  }
+                };
+                return true; 
+              };
+              case (#Err(txt)) {
+                Debug.print("error " );
+                return false;
+              }
+            };
+          }
+        };
+        case(null){
+          return false;
+        }
+      };
+    false;
+  };
+
+
+
+
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": "mops sources"
+    }
+  },

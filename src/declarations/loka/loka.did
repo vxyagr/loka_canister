@@ -1,42 +1,19 @@
-type NFTContract = 
+type MiningSite = 
  record {
-   LETBalance: nat;
-   amount: nat;
-   claimableBTC: nat;
-   claimableLOM: nat;
-   claimedBTC: nat;
-   claimedLOM: nat;
-   daysLeft: nat;
-   duration: nat;
-   electricityPerDay: nat;
-   end: nat;
-   hashrate: nat;
+   controllerCanisterId: text;
+   dollarPerHashrate: float64;
+   electricityPerKwh: float64;
    id: nat;
-   metadata: text;
-   owner: text;
-   start: nat;
+   location: text;
+   name: text;
+   nftCanisterId: text;
+   totalHashrate: nat;
  };
-type MiningContract = 
- record {
-   amount: nat;
-   duration: nat;
-   electricityPerDay: nat;
-   end: nat;
-   genesisId: nat;
-   hashrate: nat;
-   id: nat;
-   start: nat;
+type Loka = 
+ service {
+   addMiningSite: (text, text, float64, float64, nat, text, text) -> (nat);
+   getMiningSiteStatus: (nat) -> (bool) query;
+   getMiningSites: () -> (vec MiningSite) query;
+   setMiningStatus: (nat, bool) -> (bool);
  };
-service : {
-  claimBTC: () -> (nat);
-  claimLOM: () -> (nat);
-  distributeBTC: (nat, nat) -> (nat);
-  distributeLOM: (nat) -> (nat);
-  getContract: (nat) -> (MiningContract) query;
-  getContractAmount: (nat) -> (text) query;
-  getOwnedContracts: () -> (vec NFTContract) query;
-  greet: () -> (text) query;
-  mintContract: (nat, nat, nat, nat, nat, nat, nat) -> (nat);
-  pauseContract: (bool) -> (bool);
-  rechargeLET: (nat, nat) -> (nat);
-}
+service : (record {admin: principal;}) -> Loka

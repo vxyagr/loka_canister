@@ -101,15 +101,10 @@
   },
   "networks": {
     "local": {
-      "bind": "192.168.56.103:8000",
+      "bind": "127.0.0.1:8000",
       "type": "ephemeral"
     }
   },
-  "defaults": {
-    "build": {
-      "args": "",
-      "packtool": "mops sources"
-    }
-  },
+  
   "version": 1
 }
