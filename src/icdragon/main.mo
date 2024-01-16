@@ -29,7 +29,7 @@ import T "types";
 
 import ICPLedger "canister:icp_ledger_canister";
 //import ICPLedger "canister:icp_test";
-//import Eyes "canister:eyes";
+import Eyes "canister:eyes";
 //import CKBTC "canister:ckbtc_ledger";
 //import LBTC "canister:lbtc";
 
@@ -93,10 +93,13 @@ shared ({ caller = owner }) actor class ICDragon({
     betHistory_ := Buffer.toArray<T.Bet>(betHistory);
 
     userTicketQuantityHash_ := Iter.toArray(userTicketQuantityHash.entries());
+    userDoubleRollQuantityHash_ := Iter.toArray(userDoubleRollQuantityHash.entries());
     userTicketPurchaseHash_ := Iter.toArray(userTicketPurchaseHash.entries());
     userClaimableHash_ := Iter.toArray(userClaimableHash.entries());
     userClaimHistoryHash_ := Iter.toArray(userClaimHistoryHash.entries());
     userBetHistoryHash_ := Iter.toArray(userBetHistoryHash.entries());
+    bonusPoolbyWallet_ := Iter.toArray(bonusPoolbyWallet.entries());
+
   };
   system func postupgrade() {
     games := Buffer.fromArray<T.Game>(games_);
@@ -109,6 +112,7 @@ shared ({ caller = owner }) actor class ICDragon({
     userClaimableHash := HashMap.fromIter<Text, Nat>(userClaimableHash_.vals(), 1, Text.equal, Text.hash);
     userClaimHistoryHash := HashMap.fromIter<Text, [T.ClaimHistory]>(userClaimHistoryHash_.vals(), 1, Text.equal, Text.hash);
     userBetHistoryHash := HashMap.fromIter<Text, [T.Bet]>(userBetHistoryHash_.vals(), 1, Text.equal, Text.hash);
+    bonusPoolbyWallet := HashMap.fromIter<Text, [Nat]>(bonusPoolbyWallet_.vals(), 1, Text.equal, Text.hash);
 
   };
 
@@ -133,7 +137,7 @@ shared ({ caller = owner }) actor class ICDragon({
     //initialReward = 50000
     betIndex := 0;
     ticketIndex := 0;
-    ticketPrice := 5_000_000;
+    ticketPrice := 500000;
     eyesToken := false;
     eyesTokenDistribution := 100_000_000_000;
     eyesDays := 0;
@@ -209,6 +213,10 @@ shared ({ caller = owner }) actor class ICDragon({
 
   public query (message) func getTicketPrice() : async Nat {
     ticketPrice;
+  };
+
+  public query (message) func getNextTicketPrice() : async Nat {
+    nextTicketPrice;
   };
 
   public shared (message) func setTicketPrice(price_ : Nat) : async Nat {
@@ -485,6 +493,14 @@ shared ({ caller = owner }) actor class ICDragon({
     };
   };
 
+  public query (message) func getHashDoubleRoll(t : Text) : async ?Nat {
+    return let u = userDoubleRollQuantityHash.get(t);
+  };
+
+  public query (message) func getHashTicket(t : Text) : async ?Nat {
+    return let u = userTicketQuantityHash.get(t);
+  };
+
   public shared (message) func roll_dice(game_id : Nat) : async T.DiceResult {
     //get game data
     let game_ = games.get(game_id);
@@ -493,16 +509,6 @@ shared ({ caller = owner }) actor class ICDragon({
     var doubleRollRemaining_ : Nat = 0;
     Debug.print("check remaining");
     //get remaining dice roll ticket
-    switch (userDoubleRollQuantityHash.get(Principal.toText(message.caller))) {
-      case (?x) {
-        doubleRollRemaining_ := x;
-      };
-      case (null) {
-        remaining_ := 0;
-        userDoubleRollQuantityHash.put(Principal.toText(message.caller), 0);
-      };
-    };
-
     switch (userTicketQuantityHash.get(Principal.toText(message.caller))) {
       case (?x) {
         remaining_ := x;
@@ -512,10 +518,26 @@ shared ({ caller = owner }) actor class ICDragon({
         userTicketQuantityHash.put(Principal.toText(message.caller), 0);
       };
     };
+    let u = userDoubleRollQuantityHash.get(Principal.toText(message.caller));
+    switch (u) {
+      case (?x) {
+        doubleRollRemaining_ := x;
+        // return #noroll([1, x]);
+      };
+      case (null) {
+        //return #noroll([2, doubleRollRemaining_]);
+        doubleRollRemaining_ := 0;
+        userDoubleRollQuantityHash.put(Principal.toText(message.caller), 0);
+      };
+    };
+    //return #noroll([3, doubleRollRemaining_]);
+
     //check if the game is already won and closed
     if (game_.time_ended != 0) return #closed;
-    //check if there is a ticket remaining
-    if (remaining_ +doubleRollRemaining_ == 0) return #noroll;
+    //check if there is a ticket remaining including free double roll
+    let total_ = remaining_ + doubleRollRemaining_;
+    if (total_ == 0) return #noroll([remaining_, doubleRollRemaining_]);
+    //return #noroll([remaining_, doubleRollRemaining_]);
 
     var extraRoll_ = false;
     //ICP send 50% of ticket price to holder
@@ -543,9 +565,12 @@ shared ({ caller = owner }) actor class ICDragon({
     var dice_1_ = await roll();
     var dice_2_ = await roll();
 
+    //dice_1_ := 1;
+    //dice_2_ := 1;
+
     //check if Token started, mint Eyes to address based on emission halving
-    if (eyesToken and extraRoll_) {
-      //let res_ = transferEyesToken(message.caller, Nat8.toNat(dice_1_ + dice_2_));
+    if (eyesToken) {
+      let res_ = transferEyesToken(message.caller, Nat8.toNat(dice_1_ + dice_2_));
     };
 
     //write bet history to : history variable, user hash, and to game object (thats 3 places)
@@ -704,46 +729,46 @@ shared ({ caller = owner }) actor class ICDragon({
     false;
   };
 
-  /*func transferEyesToken(to_ : Principal,quantity_ : Nat) : async T.TransferResult {
+  func transferEyesToken(to_ : Principal, quantity_ : Nat) : async T.TransferResult {
 
     let transferResult = await Eyes.icrc1_transfer({
       amount = eyesTokenDistribution * quantity_;
       fee = null;
       created_at_time = null;
-      from_subaccount=null;
-      to = {owner=to_; subaccount=null};
+      from_subaccount = null;
+      to = { owner = to_; subaccount = null };
       memo = null;
     });
     var res = 0;
-    switch (transferResult)  {
+    switch (transferResult) {
       case (#Ok(number)) {
         return #success(number);
       };
       case (#Err(msg)) {
 
         Debug.print("transfer error  ");
-        switch (msg){
-          case (#BadFee(number)){
+        switch (msg) {
+          case (#BadFee(number)) {
             Debug.print("Bad Fee");
             return #error("Bad Fee");
           };
-          case (#GenericError(number)){
-            Debug.print("err "#number.message);
+          case (#GenericError(number)) {
+            Debug.print("err " #number.message);
             return #error("Generic");
           };
-          case (#InsufficientFunds(number)){
+          case (#InsufficientFunds(number)) {
             Debug.print("insufficient funds");
             return #error("insufficient funds");
 
           };
           case _ {
             Debug.print("err");
-          }
+          };
         };
         return #error("Other");
-        };
+      };
     };
-  }; */
+  };
 
   public shared (message) func getBalance({ te : Blob }) : async T.Tokens {
     //let address_blob : Blob = Text.encodeUtf8(t_);

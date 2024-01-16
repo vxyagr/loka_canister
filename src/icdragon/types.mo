@@ -1,33 +1,29 @@
 import Time "mo:base/Time";
 //import Principal "motoko/util/Principal";
 
-
 module {
 
     public type Token = Principal;
 
     public type OrderId = Nat32;
 
-
-    
-
-     public type Bet = {
-        id: Nat;
+    public type Bet = {
+        id : Nat;
         game_id : Nat;
         walletAddress : Principal;
-        dice_1: Nat8;
-        dice_2: Nat8;
+        dice_1 : Nat8;
+        dice_2 : Nat8;
         time : Int;
     };
 
     public type ICPTransferArgs = {
 
         to : Blob;
-        fee : {e8s : Nat64};
+        fee : { e8s : Nat64 };
         memo : Nat64;
         ///from_subaccount : Blob;
         //created_at_time : Nat;
-        amount : {e8s : Nat64};
+        amount : { e8s : Nat64 };
     };
     public type Tokens = { e8s : Nat64 };
 
@@ -45,9 +41,8 @@ module {
         reward_claimed : Nat;
     };
 
- 
     public type Game = {
-        id: Nat;
+        id : Nat;
         var winner : Principal;
         var totalBet : Nat;
         time_created : Int;
@@ -57,7 +52,7 @@ module {
         var bonus : Nat;
         var bonus_claimed : Bool;
         var bonus_winner : Principal;
-        
+
     };
 
     public type GameBonus = {
@@ -66,38 +61,38 @@ module {
     };
 
     public type CurrentGame = {
-        id: Nat;
+        id : Nat;
         winner : Principal;
         time_created : Int;
         time_ended : Int;
         reward : Nat;
         bets : [Bet];
         bonus : Nat;
-        
+
     };
 
     public type GameCheck = {
         #none;
-        #ok:CurrentGame;
+        #ok : CurrentGame;
     };
 
     public type TicketPurchase = {
-        id:Nat;
+        id : Nat;
         walletAddress : ?Principal;
         time : Int;
-        quantity:Nat;
-        totalPrice:Nat;
+        quantity : Nat;
+        totalPrice : Nat;
         var icp_index : Nat;
 
     };
 
     public type PaidTicketPurchase = {
-        id:Nat;
+        id : Nat;
         walletAddress : ?Principal;
         time : Int;
-        quantity:Nat;
-        totalPrice:Nat;
-        icp_index:Nat;
+        quantity : Nat;
+        totalPrice : Nat;
+        icp_index : Nat;
     };
 
     public type DiceResult = {
@@ -105,7 +100,7 @@ module {
         #lose : [Nat8];
         #extra : [Nat8];
         #closed;
-        #noroll;
+        #noroll : [Nat];
         #transferFailed : Text;
     };
 
@@ -129,11 +124,10 @@ module {
         claimableBonus : [GameBonus];
         availableDiceRoll : Nat;
     };
-    
 
-     public type Timestamp = Nat64;
-  
-  // First, define the Type that describes the Request arguments for an HTTPS outcall.
+    public type Timestamp = Nat64;
+
+    // First, define the Type that describes the Request arguments for an HTTPS outcall.
 
     public type HttpRequestArgs = {
         url : Text;
@@ -164,7 +158,7 @@ module {
     // HTTPS outcalls have an optional "transform" key. These two types help describe it.
     // The transform function can transform the body in any way, add or remove headers, or modify headers.
     // This Type defines a function called 'TransformRawResponse', which is used above.
-    
+
     public type TransformRawResponseFunction = {
         function : shared query TransformArgs -> async HttpResponsePayload;
         context : Blob;
@@ -187,12 +181,9 @@ module {
         context : Blob;
     };
 
-
     // Lastly, declare the IC management canister which you use to make the HTTPS outcall.
     public type IC = actor {
         http_request : HttpRequestArgs -> async HttpResponsePayload;
     };
 
-    
-    
 };

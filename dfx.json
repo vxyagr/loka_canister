@@ -17,7 +17,7 @@
     "icdragon": {
       "main": "src/icdragon/main.mo",
       "type": "motoko",
-      "dependencies":["icp_ledger_canister"]
+      "dependencies":["icp_ledger_canister","eyes"]
     },
     "ckbtc_minter" : {
       "type" : "custom",
