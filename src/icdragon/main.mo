@@ -128,6 +128,10 @@ shared ({ caller = owner }) actor class ICDragon({
     },
   );
 
+  public query (message) func getHalving() : async Nat {
+    return eyesDays;
+  };
+
   public shared (message) func clearData() : async () {
     assert (_isAdmin(message.caller));
 
@@ -229,6 +233,10 @@ shared ({ caller = owner }) actor class ICDragon({
     assert (_isAdmin(message.caller));
     eyesTokenDistribution := initAmount_;
     initAmount_;
+  };
+
+  public query (message) func getEyesDistribution() : async Nat {
+    eyesTokenDistribution;
   };
 
   public shared (message) func setNextTicketPrice(price_ : Nat) : async Nat {
