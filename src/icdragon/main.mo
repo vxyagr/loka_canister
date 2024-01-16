@@ -542,8 +542,7 @@ shared ({ caller = owner }) actor class ICDragon({
 
     var dice_1_ = await roll();
     var dice_2_ = await roll();
-    dice_1_ := 1;
-    dice_2_ := 1;
+
     //check if Token started, mint Eyes to address based on emission halving
     if (eyesToken and extraRoll_) {
       //let res_ = transferEyesToken(message.caller, Nat8.toNat(dice_1_ + dice_2_));
@@ -628,6 +627,7 @@ shared ({ caller = owner }) actor class ICDragon({
         switch transferResult_ {
           case (#success(x)) {
             userClaimableHash.put(Principal.toText(message.caller), 0);
+
             let claimHistory_ : T.ClaimHistory = {
               time = now();
               icp_transfer_index = x;
@@ -636,10 +636,10 @@ shared ({ caller = owner }) actor class ICDragon({
             let claimArray_ = userClaimHistoryHash.get(Principal.toText(message.caller));
             switch (claimArray_) {
               case (?c) {
-                userClaimHistoryHash.put(Principal.toText(message.caller), Array.append<T.ClaimHistory>(c, [claimHistory_]));
+                //userClaimHistoryHash.put(Principal.toText(message.caller), Array.append<T.ClaimHistory>(c, [claimHistory_]));
               };
               case (null) {
-                userClaimHistoryHash.put(Principal.toText(message.caller), [claimHistory_]);
+                //userClaimHistoryHash.put(Principal.toText(message.caller), [claimHistory_]);
               };
             };
             return true;
