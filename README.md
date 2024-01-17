@@ -100,7 +100,7 @@ record {
      token_symbol = \"LBTC\";
      token_name = \"LBTC\";
      minting_account = record { owner = principal \"${MINTER}\" };
-     transfer_fee = 0;
+     transfer_fee = 10;
      metadata = vec {};
      feature_flags = opt record{icrc2 = true};
      initial_balances = vec { record { record { owner = principal \"${MINTER}\"; }; 1000000000000; }; };
@@ -273,7 +273,7 @@ $ dfx canister call (nft name) setMinter '(principal "your controller id")'
 put some LBTC token to represent bitcoin mining rewards to your controller
 
 ```bash
-$ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"7elv3-kqaaa-aaaam-ab2eq-cai\";};  amount = 10_000_000_000;})"
+$ dfx canister call lbtc icrc1_transfer "(record { to = record { owner = principal \"bw4dl-smaaa-aaaaa-qaacq-cai\";};  amount = 10_000_000_000_000;})" --network ic
  rg2ah-xl6x4-z6svw-bdxfv-klmal-cwfel-cfgzg-eoi6q-nszv5-7z5hg-sqe
 ```
 

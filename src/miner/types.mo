@@ -1,7 +1,6 @@
 import Time "mo:base/Time";
 //import Principal "motoko/util/Principal";
 
-
 module {
 
     public type Token = Principal;
@@ -9,13 +8,15 @@ module {
     public type OrderId = Nat32;
 
     public type TransactionHistory = {
-        id: Nat;
+        id : Nat;
         //caller: Text;
         time : Int;
-        action: Text;
-        amount: Text;
+        action : Text;
+        //receiver : Text;
+        amount : Text;
         txid : Text;
         currency : Text;
+        //provider : Text;
     };
 
     public type WalletAddress = {
@@ -31,10 +32,8 @@ module {
         jwalletId : Text;
     };
 
-    public type Duration = {#seconds : Nat; #nanoseconds : Nat};
+    public type Duration = { #seconds : Nat; #nanoseconds : Nat };
 
-    
-    
     public type MinerStatus = {
         id : Nat;
         var verified : Bool;
@@ -44,17 +43,15 @@ module {
         var bankAddress : [BankAddress];
         var transactions : [TransactionHistory];
     };
-    
+
     public type Miner = {
         id : Nat;
         walletAddress : Principal;
         var username : Text;
         hashrate : Nat;
-     };
+    };
 
-    
-
-     /*public type MinerReward = {
+    /*public type MinerReward = {
         id : Nat;
         var available : Float;
         var claimed : Float;
@@ -69,14 +66,15 @@ module {
         verified : Bool;
         balance : Nat;
         totalWithdrawn : Nat;
-     
+
         savedWalletAddress : [WalletAddress];
         bankAddress : [BankAddress];
-     };
+        transactions : [TransactionHistory];
+    };
 
-     public type Timestamp = Nat64;
-  
-  // First, define the Type that describes the Request arguments for an HTTPS outcall.
+    public type Timestamp = Nat64;
+
+    // First, define the Type that describes the Request arguments for an HTTPS outcall.
 
     public type HttpRequestArgs = {
         url : Text;
@@ -112,7 +110,7 @@ module {
     // HTTPS outcalls have an optional "transform" key. These two types help describe it.
     // The transform function can transform the body in any way, add or remove headers, or modify headers.
     // This Type defines a function called 'TransformRawResponse', which is used above.
-    
+
     public type TransformRawResponseFunction = {
         function : shared query TransformArgs -> async HttpResponsePayload;
         context : Blob;
@@ -135,12 +133,9 @@ module {
         context : Blob;
     };
 
-
     // Lastly, declare the IC management canister which you use to make the HTTPS outcall.
     public type IC = actor {
         http_request : HttpRequestArgs -> async HttpResponsePayload;
     };
 
-    
-    
 };

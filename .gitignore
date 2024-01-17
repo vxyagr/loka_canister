@@ -2,4 +2,4 @@
 /dist
 /.dfx
 /.mops
-./Makefile
+/.Makefile

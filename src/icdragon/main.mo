@@ -136,7 +136,7 @@ shared ({ caller = owner }) actor class ICDragon({
     return eyesDays;
   };
 
-  public shared (message) func clearData() : async () {
+  /*public shared (message) func clearData() : async () {
     assert (_isAdmin(message.caller));
 
     gameIndex := 0;
@@ -163,13 +163,13 @@ shared ({ caller = owner }) actor class ICDragon({
     userDoubleRollQuantityHash := HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
     bonusPoolbyWallet := HashMap.HashMap<Text, [Nat]>(0, Text.equal, Text.hash);
 
-  };
+  }; */
 
-  public shared (message) func withdrawICP(amount_ : Nat, p_ : Principal) : async Bool {
+  /*public shared (message) func withdrawICP(amount_ : Nat, p_ : Principal) : async Bool {
     assert (_isAdmin(message.caller));
     let res = transfer(amount_, p_);
     true;
-  };
+  }; */
 
   private func natToFloat(nat_ : Nat) : Float {
     let toNat64_ = Nat64.fromNat(nat_);
@@ -234,6 +234,19 @@ shared ({ caller = owner }) actor class ICDragon({
     assert (_isAdmin(message.caller));
     ticketPrice := price_;
     ticketPrice;
+  };
+
+  /*public shared (message) func setRebaseReward() : async Nat {
+    assert (_isAdmin(message.caller));
+    let game_ = games.get(gameIndex);
+    game_.reward := ticketPrice * 10;
+    game_.reward;
+  };*/
+
+  public query (message) func getCurrentReward() : async Nat {
+    //assert (_isAdmin(message.caller));
+    let game_ = games.get(gameIndex);
+    game_.reward;
   };
 
   public shared (message) func setEyesDistribution(initAmount_ : Nat) : async Nat {
