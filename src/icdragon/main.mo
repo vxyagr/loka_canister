@@ -60,6 +60,7 @@ shared ({ caller = owner }) actor class ICDragon({
   stable var nextTicketPrice = 50000000;
 
   private var userTicketQuantityHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
+  private var userFirstHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
   private var userDoubleRollQuantityHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
   private var userTicketPurchaseHash = HashMap.HashMap<Text, [T.PaidTicketPurchase]>(0, Text.equal, Text.hash);
   private var userClaimableHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
@@ -78,6 +79,7 @@ shared ({ caller = owner }) actor class ICDragon({
   stable var betHistory_ : [T.Bet] = [];
 
   stable var userTicketQuantityHash_ : [(Text, Nat)] = [];
+  stable var userFirstHash_ : [(Text, Nat)] = [];
   stable var userDoubleRollQuantityHash_ : [(Text, Nat)] = [];
   stable var userTicketPurchaseHash_ : [(Text, [T.PaidTicketPurchase])] = [];
   stable var userClaimableHash_ : [(Text, Nat)] = [];
@@ -93,6 +95,7 @@ shared ({ caller = owner }) actor class ICDragon({
     betHistory_ := Buffer.toArray<T.Bet>(betHistory);
 
     userTicketQuantityHash_ := Iter.toArray(userTicketQuantityHash.entries());
+    userFirstHash_ := Iter.toArray(userFirstHash.entries());
     userDoubleRollQuantityHash_ := Iter.toArray(userDoubleRollQuantityHash.entries());
     userTicketPurchaseHash_ := Iter.toArray(userTicketPurchaseHash.entries());
     userClaimableHash_ := Iter.toArray(userClaimableHash.entries());
@@ -107,6 +110,7 @@ shared ({ caller = owner }) actor class ICDragon({
     betHistory := Buffer.fromArray<T.Bet>(betHistory_);
 
     userTicketQuantityHash := HashMap.fromIter<Text, Nat>(userTicketQuantityHash_.vals(), 1, Text.equal, Text.hash);
+    userFirstHash := HashMap.fromIter<Text, Nat>(userFirstHash_.vals(), 1, Text.equal, Text.hash);
     userDoubleRollQuantityHash := HashMap.fromIter<Text, Nat>(userDoubleRollQuantityHash_.vals(), 1, Text.equal, Text.hash);
     userTicketPurchaseHash := HashMap.fromIter<Text, [T.PaidTicketPurchase]>(userTicketPurchaseHash_.vals(), 1, Text.equal, Text.hash);
     userClaimableHash := HashMap.fromIter<Text, Nat>(userClaimableHash_.vals(), 1, Text.equal, Text.hash);
@@ -155,6 +159,9 @@ shared ({ caller = owner }) actor class ICDragon({
     userClaimableHash := HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
     userClaimHistoryHash := HashMap.HashMap<Text, [T.ClaimHistory]>(0, Text.equal, Text.hash);
     userBetHistoryHash := HashMap.HashMap<Text, [T.Bet]>(0, Text.equal, Text.hash);
+    userFirstHash := HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
+    userDoubleRollQuantityHash := HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
+    bonusPoolbyWallet := HashMap.HashMap<Text, [Nat]>(0, Text.equal, Text.hash);
 
   };
 
@@ -516,14 +523,14 @@ shared ({ caller = owner }) actor class ICDragon({
   };
 
   public shared (message) func initialEyesTokenCheck() : async Nat {
-    switch (userTicketQuantityHash.get(Principal.toText(message.caller))) {
+    switch (userFirstHash.get(Principal.toText(message.caller))) {
       case (?x) {
 
         return 0;
       };
       case (null) {
 
-        userTicketQuantityHash.put(Principal.toText(message.caller), 0);
+        userFirstHash.put(Principal.toText(message.caller), 0);
         if (eyesToken) {
           let res_ = transferEyesToken(message.caller, 2);
           return eyesTokenDistribution * 2;
