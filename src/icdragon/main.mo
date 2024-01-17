@@ -515,6 +515,24 @@ shared ({ caller = owner }) actor class ICDragon({
     return let u = userTicketQuantityHash.get(t);
   };
 
+  public shared (message) func initialEyesTokenCheck() : async Nat {
+    switch (userTicketQuantityHash.get(Principal.toText(message.caller))) {
+      case (?x) {
+
+        return 0;
+      };
+      case (null) {
+
+        userTicketQuantityHash.put(Principal.toText(message.caller), 0);
+        if (eyesToken) {
+          let res_ = transferEyesToken(message.caller, 2);
+          return eyesTokenDistribution * 2;
+        };
+      };
+    };
+    1;
+  };
+
   public shared (message) func roll_dice(game_id : Nat) : async T.DiceResult {
     //get game data
     let game_ = games.get(game_id);
