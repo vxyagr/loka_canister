@@ -12,9 +12,11 @@ module {
         //caller: Text;
         time : Int;
         action : Text;
+        //receiver : Text;
         amount : Text;
         txid : Text;
         currency : Text;
+        //provider : Text;
     };
 
     public type WalletAddress = {
