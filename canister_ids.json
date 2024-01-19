@@ -30,6 +30,9 @@
   "miner": {
     "ic": "ilah7-qqaaa-aaaam-abzyq-cai"
   },
+  "miner_prod": {
+    "ic": "rfrec-ciaaa-aaaam-ab4zq-cai"
+  },
   "nft": {
     "ic": "7rmew-lyaaa-aaaam-ab2ha-cai"
   },

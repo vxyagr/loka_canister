@@ -25,16 +25,17 @@ import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
 
 import T "types";
 //import Minter "canister:ckbtc_minter";
-//import CKBTC "canister:ckbtc_ledger";
+//import CKBTC "canister:ckbtc_ledger"; //PROD
 //import Minter "ic:mqygn-kiaaa-aaaar-qaadq-cai";
-import CKBTC "canister:lbtc";
+import CKBTC "canister:lbtc"; //DEV
 //import LBTC "canister:lbtc";
 
 shared ({ caller = owner }) actor class Miner({
   admin : Principal;
 }) = this {
   //indexes
-
+  private stable var jwalletVault = "rg2ah-xl6x4-z6svw-bdxfv-klmal-cwfel-cfgzg-eoi6q-nszv5-7z5hg-sqe"; //DEV
+  //PROD!! private stable var jwalletVault = "43hyn-pv646-27kl3-hhrll-wbdtc-k4idi-7mbyz-uvwxj-hgktq-topls-rae"; //PROD
   private var siteAdmin : Principal = admin;
 
   private stable var totalBalance = 0;
@@ -49,7 +50,6 @@ shared ({ caller = owner }) actor class Miner({
   private stable var pause = false : Bool;
   private stable var totalHashrate = 0;
   stable var lastF2poolCheck : Int = 0;
-  private stable var jwalletVault = "rg2ah-xl6x4-z6svw-bdxfv-klmal-cwfel-cfgzg-eoi6q-nszv5-7z5hg-sqe";
 
   private stable var timeStarted = false;
 

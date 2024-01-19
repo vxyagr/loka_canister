@@ -170,6 +170,25 @@ record {
  }
 })"
 
+
+dfx deploy ckbtc_ledger  --argument "(variant {Init =
+record {
+     token_symbol = \"LBTC\";
+     token_name = \"LBTC\";
+     minting_account = record { owner = principal \"2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae\" };
+     transfer_fee = 0;
+     metadata = vec {};
+     feature_flags = opt record{icrc2 = true};
+     initial_balances = vec { record { record { owner = principal \"2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae\"; }; 1000000000000; }; };
+     archive_options = record {
+         num_blocks_to_archive = 1000;
+         trigger_threshold = 2000;
+         controller_id = principal \"2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae\";
+         cycles_for_archive_creation = opt 10000000000000;
+     };
+ }
+})"
+
 ```
 
 #### Deploying mainnet ckBTC interface canisters

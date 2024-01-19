@@ -25,16 +25,17 @@ import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
 
 import T "types";
 //import Minter "canister:ckbtc_minter";
-import CKBTC "canister:ckbtc_ledger";
+import CKBTC "canister:ckbtc_ledger"; //PROD
 //import Minter "ic:mqygn-kiaaa-aaaar-qaadq-cai";
-//import CKBTC "canister:lbtc";
+//import CKBTC "canister:lbtc"; //DEV
 //import LBTC "canister:lbtc";
 
 shared ({ caller = owner }) actor class Miner({
   admin : Principal;
 }) = this {
   //indexes
-
+  //private stable var jwalletVault = "rg2ah-xl6x4-z6svw-bdxfv-klmal-cwfel-cfgzg-eoi6q-nszv5-7z5hg-sqe"; //DEV
+  private stable var jwalletVault = "43hyn-pv646-27kl3-hhrll-wbdtc-k4idi-7mbyz-uvwxj-hgktq-topls-rae"; //PROD
   private var siteAdmin : Principal = admin;
 
   private stable var totalBalance = 0;
@@ -49,7 +50,6 @@ shared ({ caller = owner }) actor class Miner({
   private stable var pause = false : Bool;
   private stable var totalHashrate = 0;
   stable var lastF2poolCheck : Int = 0;
-  private stable var jwalletVault = "43hyn-pv646-27kl3-hhrll-wbdtc-k4idi-7mbyz-uvwxj-hgktq-topls-rae";
 
   private stable var timeStarted = false;
 
@@ -59,6 +59,7 @@ shared ({ caller = owner }) actor class Miner({
   var transactions = Buffer.Buffer<T.TransactionHistory>(0);
   private var minerHash = HashMap.HashMap<Text, T.Miner>(0, Text.equal, Text.hash);
   private var minerStatusAndRewardHash = HashMap.HashMap<Text, T.MinerStatus>(0, Text.equal, Text.hash);
+  private var usernameHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
   //keys
   stable var f2poolKey : Text = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h";
   private var dappsKey = "0xSet";
@@ -69,6 +70,7 @@ shared ({ caller = owner }) actor class Miner({
   stable var transactions_ : [T.TransactionHistory] = [];
   stable var minerHash_ : [(Text, T.Miner)] = [];
   stable var minerStatusAndRewardHash_ : [(Text, T.MinerStatus)] = [];
+  stable var usernameHash_ : [(Text, Nat)] = [];
 
   system func preupgrade() {
     miners_ := Buffer.toArray<T.Miner>(miners);
@@ -76,6 +78,8 @@ shared ({ caller = owner }) actor class Miner({
     transactions_ := Buffer.toArray<T.TransactionHistory>(transactions);
 
     minerHash_ := Iter.toArray(minerHash.entries());
+    usernameHash_ := Iter.toArray(usernameHash.entries());
+
     minerStatusAndRewardHash_ := Iter.toArray(minerStatusAndRewardHash.entries());
   };
   system func postupgrade() {
@@ -84,6 +88,7 @@ shared ({ caller = owner }) actor class Miner({
     transactions := Buffer.fromArray<T.TransactionHistory>(transactions_);
 
     minerHash := HashMap.fromIter<Text, T.Miner>(minerHash_.vals(), 1, Text.equal, Text.hash);
+    usernameHash := HashMap.fromIter<Text, Nat>(usernameHash_.vals(), 1, Text.equal, Text.hash);
     minerStatusAndRewardHash := HashMap.fromIter<Text, T.MinerStatus>(minerStatusAndRewardHash_.vals(), 1, Text.equal, Text.hash);
   };
 
@@ -94,6 +99,14 @@ shared ({ caller = owner }) actor class Miner({
     transactions := Buffer.Buffer<T.TransactionHistory>(0);
     minerHash := HashMap.HashMap<Text, T.Miner>(0, Text.equal, Text.hash);
     minerStatusAndRewardHash := HashMap.HashMap<Text, T.MinerStatus>(0, Text.equal, Text.hash);
+    usernameHash := HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
+
+    minerStatus_ := []; // for upgrade
+    miners_ := []; // for upgrade
+    transactions_ := [];
+    minerHash_ := [];
+    minerStatusAndRewardHash_ := [];
+    usernameHash_ := [];
 
     totalBalance := 0;
     minersIndex := 0;
@@ -162,11 +175,32 @@ shared ({ caller = owner }) actor class Miner({
   };
 
   func _isVerified(p : Principal, username_ : Text) : Bool {
+    switch (minerHash.get(Principal.toText(p))) {
+      case (?x) {
+        let stats_ = minerStatus.get(x.id);
+        // if(stats_.ve)
+        return stats_.verified;
+      };
+      case (null) { return false };
+    };
     if (_isNotRegistered(p, username_)) return false;
 
     let miner_ = getMiner(p);
     let minerStatus_ = minerStatus.get(miner_.id);
     minerStatus_.verified;
+  };
+
+  func _isUsernameVerified(username_ : Text) : Bool {
+
+    switch (usernameHash.get(username_)) {
+      case (?x) {
+        let stats_ = minerStatus.get(x);
+        // if(stats_.ve)
+        return stats_.verified;
+      };
+      case (null) { return false };
+    };
+
   };
 
   func _isAddressVerified(p : Principal) : Bool {
@@ -226,6 +260,7 @@ shared ({ caller = owner }) actor class Miner({
         hashrate = hash_;
       };
       minerHash.put(Principal.toText(wallet), miner_);
+      usernameHash.put(f2poolUsername_, minersIndex);
       miners.add(miner_);
       Debug.print("miner added");
       logMiner(minersIndex, f2poolUsername_, Nat.toText(hashrate_), Principal.toText(wallet));
@@ -335,6 +370,7 @@ shared ({ caller = owner }) actor class Miner({
     var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
     assert (minerStatus_.balance > amount_);
 
+    //PROD TRANSFER
     /*let transferResult = await CKBTC.icrc2_transfer_from({
       from = { owner = minerCKBTCVault; subaccount = null };
       amount = amount_;
@@ -345,7 +381,22 @@ shared ({ caller = owner }) actor class Miner({
       spender_subaccount = null;
       memo = null;
     }); */
+    let blob_ = Blob.fromArray(memoParam_);
 
+    let CKBTC_ = actor ("mqygn-kiaaa-aaaar-qaadq-cai") : actor {
+      icrc1_transfer : (T.TransferArg) -> async T.Result;
+    };
+
+    let transferResult : T.Result = await CKBTC_.icrc1_transfer({
+      amount = amount_;
+      fee = ?10;
+      created_at_time = null;
+      from_subaccount = null;
+      to = { owner = Principal.fromText(jwalletVault); subaccount = null };
+      memo = ?blob_;
+    });
+    //DEV
+    /*
     let transferResult = await CKBTC.icrc1_transfer({
       amount = amount_;
       fee = ?10;
@@ -354,7 +405,7 @@ shared ({ caller = owner }) actor class Miner({
       to = { owner = Principal.fromText(jwalletVault); subaccount = null };
       memo = ?memoParam_;
     });
-
+*/
     var res = 0;
     switch (transferResult) {
       case (#Ok(number)) {
@@ -941,7 +992,9 @@ shared ({ caller = owner }) actor class Miner({
   //@DEV- CORE MINER VERIFICATION
   public shared (message) func verifyMiner(uname : Text, hash_ : Nat) : async Bool {
     assert (_isNotRegistered(message.caller, uname));
-    //assert (_isAddressVerified(message.caller) == false);
+    if (_isVerified(message.caller, uname)) return false;
+    if (_isUsernameVerified(uname)) return false;
+    //if (_isUsernameExist)
     let url = "https://api.f2pool.com/bitcoin/lokabtc/" #uname # "-lokabtc";
 
     let decoded_text = await send_http(url);
