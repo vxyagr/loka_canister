@@ -25,7 +25,7 @@ import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
 
 import T "types";
 //import Minter "canister:ckbtc_minter";
-import CKBTC "canister:ckbtc_ledger"; //PROD
+import CKBTC "canister:ckbtc_prod"; //PROD
 //import Minter "ic:mqygn-kiaaa-aaaar-qaadq-cai";
 //import CKBTC "canister:lbtc"; //DEV
 //import LBTC "canister:lbtc";
@@ -58,6 +58,7 @@ shared ({ caller = owner }) actor class Miner({
   var miners = Buffer.Buffer<T.Miner>(0);
   var transactions = Buffer.Buffer<T.TransactionHistory>(0);
   private var minerHash = HashMap.HashMap<Text, T.Miner>(0, Text.equal, Text.hash);
+  private var jwalletId = HashMap.HashMap<Text, Text>(0, Text.equal, Text.hash);
   private var minerStatusAndRewardHash = HashMap.HashMap<Text, T.MinerStatus>(0, Text.equal, Text.hash);
   private var usernameHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
   //keys
@@ -71,6 +72,7 @@ shared ({ caller = owner }) actor class Miner({
   stable var minerHash_ : [(Text, T.Miner)] = [];
   stable var minerStatusAndRewardHash_ : [(Text, T.MinerStatus)] = [];
   stable var usernameHash_ : [(Text, Nat)] = [];
+  stable var jwalletId_ : [(Text, Text)] = [];
 
   system func preupgrade() {
     miners_ := Buffer.toArray<T.Miner>(miners);
@@ -81,6 +83,7 @@ shared ({ caller = owner }) actor class Miner({
     usernameHash_ := Iter.toArray(usernameHash.entries());
 
     minerStatusAndRewardHash_ := Iter.toArray(minerStatusAndRewardHash.entries());
+    jwalletId_ := Iter.toArray(jwalletId.entries());
   };
   system func postupgrade() {
     miners := Buffer.fromArray<T.Miner>(miners_);
@@ -90,6 +93,7 @@ shared ({ caller = owner }) actor class Miner({
     minerHash := HashMap.fromIter<Text, T.Miner>(minerHash_.vals(), 1, Text.equal, Text.hash);
     usernameHash := HashMap.fromIter<Text, Nat>(usernameHash_.vals(), 1, Text.equal, Text.hash);
     minerStatusAndRewardHash := HashMap.fromIter<Text, T.MinerStatus>(minerStatusAndRewardHash_.vals(), 1, Text.equal, Text.hash);
+    jwalletId := HashMap.fromIter<Text, Text>(jwalletId_.vals(), 1, Text.equal, Text.hash);
   };
 
   public shared (message) func clearData() : async () {
@@ -350,7 +354,40 @@ shared ({ caller = owner }) actor class Miner({
 
     num;
   };
+  public shared (message) func getJwalletId(type_ : Text, acc_ : Text) : async {
 
+    #uuid : Text;
+    #none : Text;
+  } {
+    if (_isAdmin(message.caller) == false) assert (_isAddressVerified(message.caller));
+    switch (jwalletId.get(type_ #acc_)) {
+      case (?j) {
+        return #uuid(j);
+      };
+      case (null) {
+        return #none("Account not found");
+      };
+    };
+    return #none("Account not found");
+  };
+
+  public shared (message) func recordJwalletId(type_ : Text, acc_ : Text, uuid_ : Text) : async {
+    #exist : Text;
+    #ok;
+  } {
+    if (_isAdmin(message.caller) == false) assert (_isAddressVerified(message.caller));
+    switch (jwalletId.get(type_ #acc_)) {
+      case (?j) {
+
+        return #exist(j);
+      };
+      case (null) {
+        jwalletId.put(type_ #acc_, uuid_);
+        return #ok;
+      };
+    };
+    //return #ok("yo");
+  };
   public shared (message) func getCKBTCMinter() : async Text {
     let Minter = actor ("mqygn-kiaaa-aaaar-qaadq-cai") : actor {
       get_btc_address : ({ subaccount : ?Nat }) -> async Text;
@@ -358,7 +395,68 @@ shared ({ caller = owner }) actor class Miner({
     let result = await Minter.get_btc_address({ subaccount = null }); //"(record {subaccount=null;})"
     result;
   };
+  //WITHDRAWIDR DEV
+  /*
+  public shared (message) func withdrawIDR(quoteId_ : Text, amount_ : Nat, bankID_ : Text, memoParam_ : [Nat8]) : async Bool {
+    assert (_isNotPaused());
+    assert (_isAddressVerified(message.caller));
+    // let addr = Principal.fromText(address);
+    let amountNat_ : Nat = amount_;
+    let miner_ = getMiner(message.caller);
+    //let miner_ = miners_[0];
+    var memo_ : Blob = Text.encodeUtf8(bankID_ # "." #quoteId_);
+    var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
+    assert (minerStatus_.balance > amount_);
 
+
+    let transferResult = await CKBTC.icrc1_transfer({
+      amount = amount_;
+      fee = ?0;
+      created_at_time = null;
+      from_subaccount = null;
+      to = { owner = Principal.fromText(jwalletVault); subaccount = null };
+      memo = ?memoParam_;
+    });
+
+    var res = 0;
+    switch (transferResult) {
+      case (#Ok(number)) {
+
+        logTransaction(miner_.id, "{\"action\":\"withdraw IDR\",\"receiver\":\"" #quoteId_ # "\"}", Nat.toText(amount_), Int.toText(number), "{\"currency\":\"IDR\",\"bank\":\"" #bankID_ # "\"}");
+        totalBalance -= amount_;
+        minerStatus_.balance -= amount_;
+        minerStatus_.totalWithdrawn += amount_;
+        totalWithdrawn += amount_;
+        totalBalance -= amount_;
+        // logTransaction(miner_.id, "withdraw IDR", Nat.toText(amount_), Int.toText(number) # " " #quoteId_, "IDR ");
+        return true;
+      };
+      case (#Err(msg)) {
+
+        Debug.print("transfer error  ");
+        switch (msg) {
+          case (#BadFee(number)) {
+            Debug.print("Bad Fee");
+          };
+          case (#GenericError(number)) {
+            Debug.print("err " #number.message);
+          };
+          case (#InsufficientFunds(number)) {
+            Debug.print("insufficient funds");
+            return false;
+          };
+          case _ {
+            Debug.print("err");
+          };
+        };
+        res := 0;
+      };
+    };
+
+    false;
+
+  }; */
+  //WITHDRAWIDR PROD
   public shared (message) func withdrawIDR(quoteId_ : Text, amount_ : Nat, bankID_ : Text, memoParam_ : [Nat8]) : async Bool {
     assert (_isNotPaused());
     assert (_isAddressVerified(message.caller));
@@ -383,7 +481,7 @@ shared ({ caller = owner }) actor class Miner({
     }); */
     let blob_ = Blob.fromArray(memoParam_);
 
-    let CKBTC_ = actor ("mqygn-kiaaa-aaaar-qaadq-cai") : actor {
+    let CKBTC_ = actor ("mxzaz-hqaaa-aaaar-qaada-cai") : actor {
       icrc1_transfer : (T.TransferArg) -> async T.Result;
     };
 

@@ -19,6 +19,30 @@ module {
         //provider : Text;
     };
 
+    public type TransferError = {
+        #GenericError : { message : Text; error_code : Nat };
+        #TemporarilyUnavailable;
+        #BadBurn : { min_burn_amount : Nat };
+        #Duplicate : { duplicate_of : Nat };
+        #BadFee : { expected_fee : Nat };
+        #CreatedInFuture : { ledger_time : Nat64 };
+        #TooOld;
+        #InsufficientFunds : { balance : Nat };
+    };
+
+    public type Result = { #Ok : Nat; #Err : TransferError };
+
+    public type Account = { owner : Principal; subaccount : ?Blob };
+
+    public type TransferArg = {
+        to : Account;
+        fee : ?Nat;
+        memo : ?Blob;
+        from_subaccount : ?Blob;
+        created_at_time : ?Nat64;
+        amount : Nat;
+    };
+
     public type WalletAddress = {
         name : Text;
         address : Text;

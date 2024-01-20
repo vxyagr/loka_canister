@@ -171,7 +171,7 @@ record {
 })"
 
 
-dfx deploy ckbtc_ledger  --argument "(variant {Init =
+dfx deploy ckbtc_prod  --argument "(variant {Init =
 record {
      token_symbol = \"LBTC\";
      token_name = \"LBTC\";
