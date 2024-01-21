@@ -25,17 +25,17 @@ import { setTimer; cancelTimer; recurringTimer } = "mo:base/Timer";
 
 import T "types";
 //import Minter "canister:ckbtc_minter";
-import CKBTC "canister:ckbtc_ledger"; //PROD
+//import CKBTC "canister:ckbtc_prod"; //PROD
 //import Minter "ic:mqygn-kiaaa-aaaar-qaadq-cai";
-//import CKBTC "canister:lbtc"; //DEV
+import CKBTC "canister:lbtc"; //DEV
 //import LBTC "canister:lbtc";
 
 shared ({ caller = owner }) actor class Miner({
   admin : Principal;
 }) = this {
   //indexes
-  //private stable var jwalletVault = "rg2ah-xl6x4-z6svw-bdxfv-klmal-cwfel-cfgzg-eoi6q-nszv5-7z5hg-sqe"; //DEV
-  private stable var jwalletVault = "43hyn-pv646-27kl3-hhrll-wbdtc-k4idi-7mbyz-uvwxj-hgktq-topls-rae"; //PROD
+  private stable var jwalletVault = "rg2ah-xl6x4-z6svw-bdxfv-klmal-cwfel-cfgzg-eoi6q-nszv5-7z5hg-sqe"; //DEV
+  //private stable var jwalletVault = "43hyn-pv646-27kl3-hhrll-wbdtc-k4idi-7mbyz-uvwxj-hgktq-topls-rae"; //PROD
   private var siteAdmin : Principal = admin;
 
   private stable var totalBalance = 0;
@@ -58,8 +58,10 @@ shared ({ caller = owner }) actor class Miner({
   var miners = Buffer.Buffer<T.Miner>(0);
   var transactions = Buffer.Buffer<T.TransactionHistory>(0);
   private var minerHash = HashMap.HashMap<Text, T.Miner>(0, Text.equal, Text.hash);
+  private var jwalletId = HashMap.HashMap<Text, Text>(0, Text.equal, Text.hash);
   private var minerStatusAndRewardHash = HashMap.HashMap<Text, T.MinerStatus>(0, Text.equal, Text.hash);
   private var usernameHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
+  private var revenueHash = HashMap.HashMap<Text, [T.DistributionHistory]>(0, Text.equal, Text.hash);
   //keys
   stable var f2poolKey : Text = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h";
   private var dappsKey = "0xSet";
@@ -71,6 +73,8 @@ shared ({ caller = owner }) actor class Miner({
   stable var minerHash_ : [(Text, T.Miner)] = [];
   stable var minerStatusAndRewardHash_ : [(Text, T.MinerStatus)] = [];
   stable var usernameHash_ : [(Text, Nat)] = [];
+  stable var revenueHash_ : [(Text, [T.DistributionHistory])] = [];
+  stable var jwalletId_ : [(Text, Text)] = [];
 
   system func preupgrade() {
     miners_ := Buffer.toArray<T.Miner>(miners);
@@ -79,8 +83,10 @@ shared ({ caller = owner }) actor class Miner({
 
     minerHash_ := Iter.toArray(minerHash.entries());
     usernameHash_ := Iter.toArray(usernameHash.entries());
+    revenueHash_ := Iter.toArray(revenueHash.entries());
 
     minerStatusAndRewardHash_ := Iter.toArray(minerStatusAndRewardHash.entries());
+    jwalletId_ := Iter.toArray(jwalletId.entries());
   };
   system func postupgrade() {
     miners := Buffer.fromArray<T.Miner>(miners_);
@@ -89,7 +95,10 @@ shared ({ caller = owner }) actor class Miner({
 
     minerHash := HashMap.fromIter<Text, T.Miner>(minerHash_.vals(), 1, Text.equal, Text.hash);
     usernameHash := HashMap.fromIter<Text, Nat>(usernameHash_.vals(), 1, Text.equal, Text.hash);
+    revenueHash := HashMap.fromIter<Text, [T.DistributionHistory]>(revenueHash_.vals(), 1, Text.equal, Text.hash);
+
     minerStatusAndRewardHash := HashMap.fromIter<Text, T.MinerStatus>(minerStatusAndRewardHash_.vals(), 1, Text.equal, Text.hash);
+    jwalletId := HashMap.fromIter<Text, Text>(jwalletId_.vals(), 1, Text.equal, Text.hash);
   };
 
   public shared (message) func clearData() : async () {
@@ -185,9 +194,18 @@ shared ({ caller = owner }) actor class Miner({
     };
     if (_isNotRegistered(p, username_)) return false;
 
-    let miner_ = getMiner(p);
-    let minerStatus_ = minerStatus.get(miner_.id);
-    minerStatus_.verified;
+    let res_ = getMiner(p);
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        let minerStatus_ = minerStatus.get(m.id);
+        //if(m.)
+        return minerStatus_.verified;
+      };
+    };
+
   };
 
   func _isUsernameVerified(username_ : Text) : Bool {
@@ -205,10 +223,18 @@ shared ({ caller = owner }) actor class Miner({
 
   func _isAddressVerified(p : Principal) : Bool {
 
-    let miner_ = getMiner(p);
-    if (miner_.username == "<empty>") return false;
-    let minerStatus_ = minerStatus.get(miner_.id);
-    minerStatus_.verified;
+    //let miner_ = getMiner(p);
+    let res_ = getMiner(p);
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        let minerStatus_ = minerStatus.get(m.id);
+        //if(m.)
+        return minerStatus_.verified;
+      };
+    };
   };
 
   func _isRegistered(p : Principal, username_ : Text) : Bool {
@@ -224,9 +250,24 @@ shared ({ caller = owner }) actor class Miner({
   };
 
   public query (message) func isVerified(p : Principal) : async Bool {
-    let miner_ = getMiner(p);
-    if (miner_.username == "<empty>") { return false };
-    true;
+
+    let res_ = getMiner(p);
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        switch (minerStatusAndRewardHash.get(Nat.toText(m.id))) {
+          case (?m) {
+            return m.verified;
+          };
+          case (null) {
+            return false;
+          };
+        };
+      };
+    };
+
   };
 
   func _isNotVerified(p : Principal, username_ : Text) : Bool {
@@ -350,7 +391,40 @@ shared ({ caller = owner }) actor class Miner({
 
     num;
   };
+  public shared (message) func getJwalletId(type_ : Text, acc_ : Text) : async {
 
+    #uuid : Text;
+    #none : Text;
+  } {
+    if (_isAdmin(message.caller) == false) assert (_isAddressVerified(message.caller));
+    switch (jwalletId.get(type_ #acc_)) {
+      case (?j) {
+        return #uuid(j);
+      };
+      case (null) {
+        return #none("Account not found");
+      };
+    };
+    return #none("Account not found");
+  };
+
+  public shared (message) func recordJwalletId(type_ : Text, acc_ : Text, uuid_ : Text) : async {
+    #exist : Text;
+    #ok;
+  } {
+    if (_isAdmin(message.caller) == false) assert (_isAddressVerified(message.caller));
+    switch (jwalletId.get(type_ #acc_)) {
+      case (?j) {
+
+        return #exist(j);
+      };
+      case (null) {
+        jwalletId.put(type_ #acc_, uuid_);
+        return #ok;
+      };
+    };
+    //return #ok("yo");
+  };
   public shared (message) func getCKBTCMinter() : async Text {
     let Minter = actor ("mqygn-kiaaa-aaaar-qaadq-cai") : actor {
       get_btc_address : ({ subaccount : ?Nat }) -> async Text;
@@ -359,18 +433,27 @@ shared ({ caller = owner }) actor class Miner({
     result;
   };
   //WITHDRAWIDR DEV
-  /*
+
   public shared (message) func withdrawIDR(quoteId_ : Text, amount_ : Nat, bankID_ : Text, memoParam_ : [Nat8]) : async Bool {
     assert (_isNotPaused());
     assert (_isAddressVerified(message.caller));
     // let addr = Principal.fromText(address);
     let amountNat_ : Nat = amount_;
     let miner_ = getMiner(message.caller);
+    let res_ = getMiner(message.caller);
+    var id_ = 0;
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+      };
+    };
     //let miner_ = miners_[0];
     var memo_ : Blob = Text.encodeUtf8(bankID_ # "." #quoteId_);
-    var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
+    var minerStatus_ : T.MinerStatus = minerStatus.get(id_);
     assert (minerStatus_.balance > amount_);
-
 
     let transferResult = await CKBTC.icrc1_transfer({
       amount = amount_;
@@ -385,7 +468,93 @@ shared ({ caller = owner }) actor class Miner({
     switch (transferResult) {
       case (#Ok(number)) {
 
-        logTransaction(miner_.id, "{\"action\":\"withdraw IDR\",\"receiver\":\"" #quoteId_ # "\"}", Nat.toText(amount_), Int.toText(number), "{\"currency\":\"IDR\",\"bank\":\"" #bankID_ # "\"}");
+        logTransaction(id_, "{\"action\":\"withdraw IDR\",\"receiver\":\"" #quoteId_ # "\"}", Nat.toText(amount_), Int.toText(number), "{\"currency\":\"IDR\",\"bank\":\"" #bankID_ # "\"}");
+        totalBalance -= amount_;
+        minerStatus_.balance -= amount_;
+        minerStatus_.totalWithdrawn += amount_;
+        totalWithdrawn += amount_;
+        totalBalance -= amount_;
+        // logTransaction(miner_.id, "withdraw IDR", Nat.toText(amount_), Int.toText(number) # " " #quoteId_, "IDR ");
+        return true;
+      };
+      case (#Err(msg)) {
+
+        Debug.print("transfer error  ");
+        switch (msg) {
+          case (#BadFee(number)) {
+            Debug.print("Bad Fee");
+          };
+          case (#GenericError(number)) {
+            Debug.print("err " #number.message);
+          };
+          case (#InsufficientFunds(number)) {
+            Debug.print("insufficient funds");
+            return false;
+          };
+          case _ {
+            Debug.print("err");
+          };
+        };
+        res := 0;
+      };
+    };
+
+    false;
+
+  };
+  //WITHDRAWIDR PROD
+  /*
+  public shared (message) func withdrawIDR(quoteId_ : Text, amount_ : Nat, bankID_ : Text, memoParam_ : [Nat8]) : async Bool {
+    assert (_isNotPaused());
+    assert (_isAddressVerified(message.caller));
+    // let addr = Principal.fromText(address);
+    let amountNat_ : Nat = amount_;
+    let res_ = getMiner(message.caller);
+    var id_ = 0;
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+      };
+    };
+    //let miner_ = miners_[0];
+    var memo_ : Blob = Text.encodeUtf8(bankID_ # "." #quoteId_);
+    var minerStatus_ : T.MinerStatus = minerStatus.get(id_);
+    assert (minerStatus_.balance > amount_);
+
+
+    let blob_ = Blob.fromArray(memoParam_);
+
+    let CKBTC_ = actor ("mxzaz-hqaaa-aaaar-qaada-cai") : actor {
+      icrc1_transfer : (T.TransferArg) -> async T.Result;
+    };
+
+    let transferResult : T.Result = await CKBTC_.icrc1_transfer({
+      amount = amount_;
+      fee = ?10;
+      created_at_time = null;
+      from_subaccount = null;
+      to = { owner = Principal.fromText(jwalletVault); subaccount = null };
+      memo = ?blob_;
+    });
+    //DEV
+    /*
+    let transferResult = await CKBTC.icrc1_transfer({
+      amount = amount_;
+      fee = ?10;
+      created_at_time = null;
+      from_subaccount = null;
+      to = { owner = Principal.fromText(jwalletVault); subaccount = null };
+      memo = ?memoParam_;
+    });
+*/
+    var res = 0;
+    switch (transferResult) {
+      case (#Ok(number)) {
+
+        logTransaction(id_, "{\"action\":\"withdraw IDR\",\"receiver\":\"" #quoteId_ # "\"}", Nat.toText(amount_), Int.toText(number), "{\"currency\":\"IDR\",\"bank\":\"" #bankID_ # "\"}");
         totalBalance -= amount_;
         minerStatus_.balance -= amount_;
         minerStatus_.totalWithdrawn += amount_;
@@ -419,92 +588,6 @@ shared ({ caller = owner }) actor class Miner({
     false;
 
   }; */
-  //WITHDRAWIDR PROD
-  public shared (message) func withdrawIDR(quoteId_ : Text, amount_ : Nat, bankID_ : Text, memoParam_ : [Nat8]) : async Bool {
-    assert (_isNotPaused());
-    assert (_isAddressVerified(message.caller));
-    // let addr = Principal.fromText(address);
-    let amountNat_ : Nat = amount_;
-    let miner_ = getMiner(message.caller);
-    //let miner_ = miners_[0];
-    var memo_ : Blob = Text.encodeUtf8(bankID_ # "." #quoteId_);
-    var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
-    assert (minerStatus_.balance > amount_);
-
-    //PROD TRANSFER
-    /*let transferResult = await CKBTC.icrc2_transfer_from({
-      from = { owner = minerCKBTCVault; subaccount = null };
-      amount = amount_;
-      fee = null;
-      created_at_time = null;
-      from_subaccount = null;
-      to = { owner = Principal.fromText(jwalletVault); subaccount = null };
-      spender_subaccount = null;
-      memo = null;
-    }); */
-    let blob_ = Blob.fromArray(memoParam_);
-
-    let CKBTC_ = actor ("mqygn-kiaaa-aaaar-qaadq-cai") : actor {
-      icrc1_transfer : (T.TransferArg) -> async T.Result;
-    };
-
-    let transferResult : T.Result = await CKBTC_.icrc1_transfer({
-      amount = amount_;
-      fee = ?10;
-      created_at_time = null;
-      from_subaccount = null;
-      to = { owner = Principal.fromText(jwalletVault); subaccount = null };
-      memo = ?blob_;
-    });
-    //DEV
-    /*
-    let transferResult = await CKBTC.icrc1_transfer({
-      amount = amount_;
-      fee = ?10;
-      created_at_time = null;
-      from_subaccount = null;
-      to = { owner = Principal.fromText(jwalletVault); subaccount = null };
-      memo = ?memoParam_;
-    });
-*/
-    var res = 0;
-    switch (transferResult) {
-      case (#Ok(number)) {
-
-        logTransaction(miner_.id, "{\"action\":\"withdraw IDR\",\"receiver\":\"" #quoteId_ # "\"}", Nat.toText(amount_), Int.toText(number), "{\"currency\":\"IDR\",\"bank\":\"" #bankID_ # "\"}");
-        totalBalance -= amount_;
-        minerStatus_.balance -= amount_;
-        minerStatus_.totalWithdrawn += amount_;
-        totalWithdrawn += amount_;
-        totalBalance -= amount_;
-        // logTransaction(miner_.id, "withdraw IDR", Nat.toText(amount_), Int.toText(number) # " " #quoteId_, "IDR ");
-        return true;
-      };
-      case (#Err(msg)) {
-
-        Debug.print("transfer error  ");
-        switch (msg) {
-          case (#BadFee(number)) {
-            Debug.print("Bad Fee");
-          };
-          case (#GenericError(number)) {
-            Debug.print("err " #number.message);
-          };
-          case (#InsufficientFunds(number)) {
-            Debug.print("insufficient funds");
-            return false;
-          };
-          case _ {
-            Debug.print("err");
-          };
-        };
-        res := 0;
-      };
-    };
-
-    false;
-
-  };
 
   public shared (message) func withdrawCKBTC(username_ : Text, amount_ : Nat, address : Text) : async T.TransferRes {
     assert (_isNotPaused());
@@ -512,9 +595,18 @@ shared ({ caller = owner }) actor class Miner({
     assert (totalBalance > amount_);
     //let addr = Principal.fromText(message.caller);
     let amountNat_ : Nat = amount_;
-    let miner_ = getMiner(message.caller);
+    let res_ = getMiner(message.caller);
+    var id_ = 0;
+    switch (res_) {
+      case (#none) {
+        //return false;
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+      };
+    };
     //let miner_ = miners_[0];
-    var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
+    var minerStatus_ : T.MinerStatus = minerStatus.get(id_);
     assert (minerStatus_.balance > amount_);
 
     let transferResult = await CKBTC.icrc1_transfer({
@@ -531,7 +623,7 @@ shared ({ caller = owner }) actor class Miner({
     switch (transferResult) {
       case (#Ok(number)) {
 
-        logTransaction(miner_.id, "{\"action\":\"withdraw CKBTC\",\"receiver\":\"" #address # "\"}", Nat.toText(amount_), Int.toText(number), "{\"currency\":\"CKBTC\",\"chain\":\"ICP\"}");
+        logTransaction(id_, "{\"action\":\"withdraw CKBTC\",\"receiver\":\"" #address # "\"}", Nat.toText(amount_), Int.toText(number), "{\"currency\":\"CKBTC\",\"chain\":\"ICP\"}");
         minerStatus_.balance -= amount_;
         minerStatus_.totalWithdrawn += amount_;
         totalWithdrawn += amount_;
@@ -658,8 +750,18 @@ shared ({ caller = owner }) actor class Miner({
     assert (_isNotPaused());
     assert (_isVerified(message.caller, username_));
     let amountNat_ : Nat = amount_;
-    let miner_ = getMiner(message.caller);
-    var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
+    //let miner_ = getMiner(message.caller);
+    let res_ = getMiner(message.caller);
+    var id_ = 0;
+    switch (res_) {
+      case (#none) {
+        // return false;
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+      };
+    };
+    var minerStatus_ : T.MinerStatus = minerStatus.get(id_);
 
     let ic : T.IC = actor ("aaaaa-aa");
     let uid_ = addr_ #usd_ #Int.toText(now());
@@ -677,7 +779,7 @@ shared ({ caller = owner }) actor class Miner({
         totalBalance -= amount_;
         totalWithdrawn += amount_;
       };
-      logTransaction(miner_.id, "{\"action\":\"withdraw USDT\",\"receiver\":\"" #addr_ # "\"}", Nat.toText(amount_), decoded_text, "{\"currency\":\"USDT\",\"chain\":\"Arbitrum\"}");
+      logTransaction(id_, "{\"action\":\"withdraw USDT\",\"receiver\":\"" #addr_ # "\"}", Nat.toText(amount_), decoded_text, "{\"currency\":\"USDT\",\"chain\":\"Arbitrum\"}");
       //logTransaction(miner_.id, "{action:\"withdrawCKBTC\",receiver:\""#address#"\"}", Nat.toText(amount_), Int.toText(number), "{currency:\"CKBTC\",chain:\"ICP\"}");
 
       return #success(1);
@@ -803,7 +905,7 @@ shared ({ caller = owner }) actor class Miner({
     return amountFloat_;
   };
 
-  func getMiner(wallet_ : Principal) : T.Miner {
+  func getMiner(wallet_ : Principal) : { #none; #ok : T.Miner } {
     var miner_id : Nat = 0;
     let emptyMiner = {
       id = 0;
@@ -814,10 +916,10 @@ shared ({ caller = owner }) actor class Miner({
     let miner_ = minerHash.get(Principal.toText(wallet_));
     switch (miner_) {
       case (?m) {
-        return m;
+        return #ok(m);
       };
       case (null) {
-        return emptyMiner;
+        return #none;
       };
     };
   };
@@ -842,38 +944,126 @@ shared ({ caller = owner }) actor class Miner({
     };
   }; */
 
-  public query (message) func getMinerData() : async T.MinerData {
+  public query (message) func getMinerData() : async {
+    #none : Nat;
+    #ok : T.MinerData;
+  } {
 
     assert (_isAddressVerified(message.caller));
-    let miner_ = getMiner(message.caller);
-    let status_ = minerStatus.get(miner_.id);
+    //let miner_ = getMiner(message.caller);
+    let res_ = getMiner(message.caller);
+    var id_ = 0;
+    var revenueHistory_ : [T.DistributionHistory] = [];
+    var yesterdayRevenue_ = 0;
+    switch (res_) {
+      case (#none) {
+        return #none(1);
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+        let status_ = minerStatus.get(id_);
+        switch (revenueHash.get(Principal.toText(m.walletAddress))) {
+          case (?r) {
+            revenueHistory_ := r;
+            if (Array.size(r) > 0) yesterdayRevenue_ := r[Array.size(r) -1].sats;
+          };
+          case (null) {
 
-    let minerData : T.MinerData = {
-      id = miner_.id;
-      walletAddress = miner_.walletAddress;
-      walletAddressText = Principal.toText(miner_.walletAddress);
-      username = miner_.username;
-      hashrate = miner_.hashrate;
-      verified = status_.verified;
-      balance = status_.balance;
-      //balance = 100000000;
-      totalWithdrawn = status_.totalWithdrawn;
+          };
+        };
 
-      savedWalletAddress = status_.walletAddress;
-      bankAddress = status_.bankAddress;
-      transactions = status_.transactions;
+        let minerData : T.MinerData = {
+          id = id_;
+          walletAddress = m.walletAddress;
+          walletAddressText = Principal.toText(m.walletAddress);
+          username = m.username;
+          hashrate = m.hashrate;
+          verified = status_.verified;
+          balance = status_.balance;
+          //balance = 100000000;
+          totalWithdrawn = status_.totalWithdrawn;
+
+          savedWalletAddress = status_.walletAddress;
+          bankAddress = status_.bankAddress;
+          transactions = status_.transactions;
+          revenueHistory = revenueHistory_;
+          yesterdayRevenue = yesterdayRevenue_;
+        };
+        //Debug.print("fetched 3");
+        return #ok(minerData);
+      };
     };
-    //Debug.print("fetched 3");
-    minerData;
+
   };
 
-  public query (message) func checkMiner(p_ : Text) : async T.MinerData {
-    assert (_isAdmin(message.caller));
-    let addr_ = Principal.fromText(p_);
-    assert (_isAddressVerified(addr_));
-    let miner_ = getMiner(addr_);
-    let status_ = minerStatus.get(miner_.id);
+  public query (message) func fetchMinerByPrincipal(p : Principal) : async {
+    #none : Nat;
+    #ok : T.MinerData;
+  } {
 
+    assert (_isAdmin(message.caller));
+    let res_ = getMiner(p);
+    var id_ = 0;
+    var revenueHistory_ : [T.DistributionHistory] = [];
+    var yesterdayRevenue_ = 0;
+    switch (res_) {
+      case (#none) {
+        return #none(1);
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+        let status_ = minerStatus.get(id_);
+        switch (revenueHash.get(Principal.toText(m.walletAddress))) {
+          case (?r) {
+            revenueHistory_ := r;
+            if (Array.size(r) > 0) yesterdayRevenue_ := r[Array.size(r) -1].sats;
+
+          };
+          case (null) {
+
+          };
+        };
+        let minerData : T.MinerData = {
+          id = id_;
+          walletAddress = m.walletAddress;
+          walletAddressText = Principal.toText(m.walletAddress);
+          username = m.username;
+          hashrate = m.hashrate;
+          verified = status_.verified;
+          balance = status_.balance;
+          //balance = 100000000;
+          totalWithdrawn = status_.totalWithdrawn;
+
+          savedWalletAddress = status_.walletAddress;
+          bankAddress = status_.bankAddress;
+          transactions = status_.transactions;
+          revenueHistory = revenueHistory_;
+          yesterdayRevenue = yesterdayRevenue_;
+        };
+        //Debug.print("fetched 3");
+        return #ok(minerData);
+      };
+    };
+
+  };
+
+  public query (message) func fetchMinerById(p : Nat) : async T.MinerData {
+
+    assert (_isAdmin(message.caller));
+    let miner_ = miners.get(p);
+    let status_ = minerStatus.get(miner_.id);
+    var revenueHistory_ : [T.DistributionHistory] = [];
+    var yesterdayRevenue_ = 0;
+    switch (revenueHash.get(Principal.toText(miner_.walletAddress))) {
+      case (?r) {
+        revenueHistory_ := r;
+        //let hist = Array.size(r);
+        if (Array.size(r) > 0) yesterdayRevenue_ := r[Array.size(r) -1].sats;
+      };
+      case (null) {
+
+      };
+    };
     let minerData : T.MinerData = {
       id = miner_.id;
       walletAddress = miner_.walletAddress;
@@ -888,6 +1078,8 @@ shared ({ caller = owner }) actor class Miner({
       savedWalletAddress = status_.walletAddress;
       bankAddress = status_.bankAddress;
       transactions = status_.transactions;
+      revenueHistory = revenueHistory_;
+      yesterdayRevenue = yesterdayRevenue_;
     };
     //Debug.print("fetched 3");
     minerData;
@@ -901,8 +1093,18 @@ shared ({ caller = owner }) actor class Miner({
 
   public shared (message) func saveWalletAddress(name_ : Text, address_ : Text, currency_ : Text) : async Bool {
     assert (_isAddressVerified(message.caller));
-    let miner_ = getMiner(message.caller);
-    let status_ = minerStatus.get(miner_.id);
+    //let miner_ = getMiner(message.caller);
+    let res_ = getMiner(message.caller);
+    var id_ = 0;
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+      };
+    };
+    let status_ = minerStatus.get(id_);
     let isthere = Array.find<T.WalletAddress>(status_.walletAddress, func wallet = wallet.address == address_);
     assert (isthere == null);
     let wallet_ : [T.WalletAddress] = [{
@@ -916,8 +1118,17 @@ shared ({ caller = owner }) actor class Miner({
 
   public shared (message) func saveBankAddress(name_ : Text, account_ : Text, bankName_ : Text, jwalletId_ : Text) : async Bool {
     assert (_isAddressVerified(message.caller));
-    let miner_ = getMiner(message.caller);
-    let status_ = minerStatus.get(miner_.id);
+    let res_ = getMiner(message.caller);
+    var id_ = 0;
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+      };
+    };
+    let status_ = minerStatus.get(id_);
     let isthere = Array.find<T.BankAddress>(status_.bankAddress, func bank = bank.accountNumber == account_);
     assert (isthere == null);
     let bank_ : [T.BankAddress] = [{
@@ -964,8 +1175,19 @@ shared ({ caller = owner }) actor class Miner({
   };
 
   public shared (message) func setBalance(b : Nat) : async Bool {
-    let miner_ = getMiner(message.caller);
-    let minerStatus_ = minerStatus.get(miner_.id);
+    //let miner_ = getMiner(message.caller);
+    let res_ = getMiner(message.caller);
+    var id_ = 0;
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+      };
+    };
+    let status_ = minerStatus.get(id_);
+    let minerStatus_ = minerStatus.get(id_);
     minerStatus_.balance := b;
     true;
   };
@@ -1035,11 +1257,26 @@ shared ({ caller = owner }) actor class Miner({
               let hr_ = textSplit(hashrateRewards_, '/');
               var username = hr_[0];
               var reward = textToNat(hr_[1]);
+              var hashrate_ = textToNat(hr_[2]);
               Debug.print("miner username : " #username # " " #miner.username);
               if (username == miner.username # "-lokabtc") {
                 Debug.print("distributing " #Nat.toText(reward));
                 status_.balance += reward;
                 totalBalance += reward;
+              };
+              let rev : [T.DistributionHistory] = [{
+                time = now();
+                hashrate = hashrate_;
+                sats = reward;
+              }];
+              switch (revenueHash.get(Principal.toText(miner.walletAddress))) {
+                case (?r) {
+                  revenueHash.put(Principal.toText(miner.walletAddress), Array.append<T.DistributionHistory>(r, rev));
+
+                };
+                case (null) {
+                  revenueHash.put(Principal.toText(miner.walletAddress), rev);
+                };
               };
             };
           };
@@ -1071,12 +1308,24 @@ shared ({ caller = owner }) actor class Miner({
 
   func removeMiner(p_ : Principal) : async Bool {
     assert (_isAddressVerified(p_));
-    let miner_ = getMiner(p_);
-    var minerStatus_ : T.MinerStatus = minerStatus.get(miner_.id);
-    minerStatus_.verified := false;
-    miner_.username := "";
+    // let miner_ = getMiner(p_);
+    let res_ = getMiner(p_);
+    var id_ = 0;
+    switch (res_) {
+      case (#none) {
+        return false;
+      };
+      case (#ok(m)) {
+        id_ := m.id;
+        let status_ = minerStatus.get(id_);
+        var minerStatus_ : T.MinerStatus = minerStatus.get(id_);
+        minerStatus_.verified := false;
+        m.username := "";
 
-    true;
+        return true;
+      };
+    };
+
   };
 
   public query func transform(raw : T.TransformArgs) : async T.CanisterHttpResponsePayload {

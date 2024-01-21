@@ -81,6 +81,12 @@ module {
         var claimed : Float;
      };*/
 
+    public type DistributionHistory = {
+        time : Int;
+        hashrate : Nat;
+        sats : Nat;
+    };
+
     public type MinerData = {
         id : Nat;
         walletAddress : Principal;
@@ -94,6 +100,8 @@ module {
         savedWalletAddress : [WalletAddress];
         bankAddress : [BankAddress];
         transactions : [TransactionHistory];
+        revenueHistory : [DistributionHistory];
+        yesterdayRevenue : Nat;
     };
 
     public type Timestamp = Nat64;

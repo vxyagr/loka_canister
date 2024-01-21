@@ -56,6 +56,12 @@ module {
         jwalletId : Text;
     };
 
+    public type DistributionHistory = {
+        time : Int;
+        hashrate : Nat;
+        sats : Nat;
+    };
+
     public type Duration = { #seconds : Nat; #nanoseconds : Nat };
 
     public type MinerStatus = {
@@ -94,6 +100,8 @@ module {
         savedWalletAddress : [WalletAddress];
         bankAddress : [BankAddress];
         transactions : [TransactionHistory];
+        revenueHistory : [DistributionHistory];
+        yesterdayRevenue : Nat;
     };
 
     public type Timestamp = Nat64;
