@@ -7,7 +7,7 @@
     "miner": {
       "main": "src/miner/main.mo",
       "type": "motoko",
-      "dependencies": ["ckbtc_ledger","lbtc"]
+      "dependencies": ["lbtc"]
     },
     "miner_prod": {
       "main": "src/miner_production/main.mo",

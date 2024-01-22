@@ -75,6 +75,112 @@ shared ({ caller = owner }) actor class Miner({
   stable var usernameHash_ : [(Text, Nat)] = [];
   stable var revenueHash_ : [(Text, [T.DistributionHistory])] = [];
   stable var jwalletId_ : [(Text, Text)] = [];
+  stable var schedulerId = 0;
+  stable var nextTimeStamp = 0;
+  stable var schedulerSecondsInterval = 10;
+  stable var counter = 0;
+
+  public shared (message) func getCurrentScheduler() : async Nat {
+    return schedulerId;
+  };
+
+  public shared (message) func getICPTimeString() : async Text {
+    Debug.print("getting next timestamp");
+
+    let tmn_ = now() / 1000000;
+    let url = "https://api.lokamining.com/timeFromStamp?timestamp=" #Int.toText(tmn_);
+
+    let decoded_text = await send_http(url);
+    Debug.print(decoded_text);
+    return decoded_text;
+  };
+
+  func getNextTimeStamp(tm_ : Int) : async Nat {
+    Debug.print("getting next timestamp");
+    let tmn_ = tm_ / 1000000;
+    let url = "https://api.lokamining.com/nextTimeStamp?timestamp=" #Int.toText(tmn_);
+
+    let decoded_text = await send_http(url);
+    Debug.print(decoded_text);
+    return textToNat(decoded_text);
+    //return 0;
+
+  };
+
+  /*public query (message) func getNextDistributionHour() : async Nat {
+    return nextTimeStamp;
+  }; */
+  //function to check scheduler / scheduler
+  //returns counter+10 each 10 seconds when waiting for night time, and only adds +1 when already active
+  public query (message) func getCounter() : async Nat {
+    return counter;
+  };
+
+  /*public shared (message) func getTimeStamp(tm_ : Int) : async Nat {
+    Debug.print("getting next timestamp");
+    let nn = tm_ / 1000000;
+    //return Int.toText(nn);
+    let url = "https://api.lokamining.com/nextTimeStamp?timestamp=" #Int.toText(nn);
+
+    let decoded_text = await send_http(url);
+    Debug.print(decoded_text);
+    //return "";
+    return textToNat(decoded_text);
+    //return url;
+
+  }; */
+
+  public shared (message) func stopScheduler(id_ : Nat) : async Bool {
+    assert (_isAdmin(message.caller));
+    let res = cancelTimer(id_);
+    true;
+  };
+
+  /*public shared (message) func forceEx() : async () {
+    nextTimeStamp := 1;
+  }; */
+
+  public shared (message) func startScheduler() : async Nat {
+    assert (_isAdmin(message.caller));
+    await initScheduler();
+  };
+
+  func initScheduler() : async Nat {
+
+    cancelTimer(schedulerId);
+    let currentTimeStamp_ = now();
+    nextTimeStamp := await getNextTimeStamp(currentTimeStamp_);
+    Debug.print("stamp " #Int.toText(nextTimeStamp));
+    if (nextTimeStamp == 0) return 0;
+    schedulerId := recurringTimer(
+      #seconds(10),
+      func() : async () {
+        if (counter < 1000) { counter += 10 } else { counter := 0 };
+        let time_ = now() / 1000000;
+        if (time_ >= nextTimeStamp) {
+          counter := 0;
+          let res = await routine24();
+          schedulerSecondsInterval := 24 * 60 * 60;
+          cancelTimer(schedulerId);
+          schedulerId := scheduler();
+
+        };
+      },
+    );
+    schedulerId;
+  };
+
+  func scheduler() : Nat {
+    schedulerId := recurringTimer(
+      // #seconds(24 * 60 * 60),
+      #seconds(24 * 60 * 60),
+      func() : async () {
+        if (counter < 1000) { counter += 1 } else { counter := 0 };
+        let res = await routine24();
+      },
+    );
+    schedulerId;
+  };
 
   system func preupgrade() {
     miners_ := Buffer.toArray<T.Miner>(miners);
@@ -99,6 +205,8 @@ shared ({ caller = owner }) actor class Miner({
 
     minerStatusAndRewardHash := HashMap.fromIter<Text, T.MinerStatus>(minerStatusAndRewardHash_.vals(), 1, Text.equal, Text.hash);
     jwalletId := HashMap.fromIter<Text, Text>(jwalletId_.vals(), 1, Text.equal, Text.hash);
+
+    //let sched = await initScheduler();
   };
 
   public shared (message) func clearData() : async () {
@@ -109,6 +217,7 @@ shared ({ caller = owner }) actor class Miner({
     minerHash := HashMap.HashMap<Text, T.Miner>(0, Text.equal, Text.hash);
     minerStatusAndRewardHash := HashMap.HashMap<Text, T.MinerStatus>(0, Text.equal, Text.hash);
     usernameHash := HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
+    revenueHash := HashMap.HashMap<Text, [T.DistributionHistory]>(0, Text.equal, Text.hash);
 
     minerStatus_ := []; // for upgrade
     miners_ := []; // for upgrade
@@ -123,6 +232,11 @@ shared ({ caller = owner }) actor class Miner({
     lastF2poolCheck := 0;
     transactionIndex := 0;
     timeStarted := false;
+
+    schedulerId := 0;
+    nextTimeStamp := 0;
+    schedulerSecondsInterval := 10;
+    counter := 0;
   };
 
   func _isAdmin(p : Principal) : Bool {
@@ -524,7 +638,6 @@ shared ({ caller = owner }) actor class Miner({
     var minerStatus_ : T.MinerStatus = minerStatus.get(id_);
     assert (minerStatus_.balance > amount_);
 
-
     let blob_ = Blob.fromArray(memoParam_);
 
     let CKBTC_ = actor ("mxzaz-hqaaa-aaaar-qaada-cai") : actor {
@@ -539,17 +652,7 @@ shared ({ caller = owner }) actor class Miner({
       to = { owner = Principal.fromText(jwalletVault); subaccount = null };
       memo = ?blob_;
     });
-    //DEV
-    /*
-    let transferResult = await CKBTC.icrc1_transfer({
-      amount = amount_;
-      fee = ?10;
-      created_at_time = null;
-      from_subaccount = null;
-      to = { owner = Principal.fromText(jwalletVault); subaccount = null };
-      memo = ?memoParam_;
-    });
-*/
+
     var res = 0;
     switch (transferResult) {
       case (#Ok(number)) {
@@ -1263,21 +1366,22 @@ shared ({ caller = owner }) actor class Miner({
                 Debug.print("distributing " #Nat.toText(reward));
                 status_.balance += reward;
                 totalBalance += reward;
-              };
-              let rev : [T.DistributionHistory] = [{
-                time = now();
-                hashrate = hashrate_;
-                sats = reward;
-              }];
-              switch (revenueHash.get(Principal.toText(miner.walletAddress))) {
-                case (?r) {
-                  revenueHash.put(Principal.toText(miner.walletAddress), Array.append<T.DistributionHistory>(r, rev));
+                let rev : [T.DistributionHistory] = [{
+                  time = now();
+                  hashrate = hashrate_;
+                  sats = reward;
+                }];
+                switch (revenueHash.get(Principal.toText(miner.walletAddress))) {
+                  case (?r) {
+                    revenueHash.put(Principal.toText(miner.walletAddress), Array.append<T.DistributionHistory>(r, rev));
 
-                };
-                case (null) {
-                  revenueHash.put(Principal.toText(miner.walletAddress), rev);
+                  };
+                  case (null) {
+                    revenueHash.put(Principal.toText(miner.walletAddress), rev);
+                  };
                 };
               };
+
             };
           };
         } else {
@@ -1328,6 +1432,8 @@ shared ({ caller = owner }) actor class Miner({
 
   };
 
+  //@DEV- CORE MINER VERIFICATION
+
   public query func transform(raw : T.TransformArgs) : async T.CanisterHttpResponsePayload {
     let transformed : T.CanisterHttpResponsePayload = {
       status = raw.response.status;
@@ -1354,17 +1460,5 @@ shared ({ caller = owner }) actor class Miner({
   func generateUUID() : Text {
     "UUID-123456789";
   };
-
-  var scheduler = ignore recurringTimer(
-    #seconds(24 * 60 * 60),
-    func() : async () {
-      //var scheduler = ignore recurringTimer(#seconds (10),  func () : async () {
-      Debug.print("running 2");
-      let res = await routine24();
-      if (timeStarted) {
-        let res = await routine24();
-      };
-    },
-  );
 
 };
