@@ -14,11 +14,7 @@
       "type": "motoko",
       "dependencies": ["ckbtc_prod"]
     },
-    "icdragon": {
-      "main": "src/icdragon/main.mo",
-      "type": "motoko",
-      "dependencies":["icp_ledger_canister","eyes"]
-    },
+    
     "ckbtc_minter" : {
       "type" : "custom",
       "candid": "https://github.com/dfinity/ic/blob/master/rs/bitcoin/ckbtc/minter/ckbtc_minter.did",

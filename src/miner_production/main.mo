@@ -52,6 +52,7 @@ shared ({ caller = owner }) actor class Miner({
   stable var lastF2poolCheck : Int = 0;
 
   private stable var timeStarted = false;
+  stable var distributionHistoryList : [{ time : Int; data : Text }] = [];
 
   //buffers and hashmaps
   var minerStatus = Buffer.Buffer<T.MinerStatus>(0);
@@ -62,6 +63,7 @@ shared ({ caller = owner }) actor class Miner({
   private var minerStatusAndRewardHash = HashMap.HashMap<Text, T.MinerStatus>(0, Text.equal, Text.hash);
   private var usernameHash = HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
   private var revenueHash = HashMap.HashMap<Text, [T.DistributionHistory]>(0, Text.equal, Text.hash);
+
   //keys
   stable var f2poolKey : Text = "gxq33xia5tdocncubl0ivy91aetpiqm514wm6z77emrruwlg0l1d7lnrvctr4f5h";
   private var dappsKey = "0xSet";
@@ -97,7 +99,7 @@ shared ({ caller = owner }) actor class Miner({
 
   func getNextTimeStamp(tm_ : Int) : async Nat {
     Debug.print("getting next timestamp");
-    let tmn_ = tm_ / 1000000;
+    let tmn_ = tm_;
     let url = "https://api.lokamining.com/nextTimeStamp?timestamp=" #Int.toText(tmn_);
 
     let decoded_text = await send_http(url);
@@ -107,9 +109,45 @@ shared ({ caller = owner }) actor class Miner({
 
   };
 
-  /*public query (message) func getNextDistributionHour() : async Nat {
+  public shared (message) func getNext() : async Nat {
+    assert (_isAdmin(message.caller));
+    Debug.print("getting next timestamp");
+    let tmn_ = now() / 1000000;
+    let url = "https://api.lokamining.com/nextTimeStamp?timestamp=" #Int.toText(tmn_);
+
+    let decoded_text = await send_http(url);
+    Debug.print(decoded_text);
+    return textToNat(decoded_text);
+    //return 0;
+
+  };
+
+  public shared (message) func compareNow() : async Bool {
+    assert (_isAdmin(message.caller));
+    Debug.print("getting next timestamp");
+    let tmn_ = now() / 1000000;
+    let url = "https://api.lokamining.com/nextTimeStamp?timestamp=" #Int.toText(tmn_);
+
+    let decoded_text = await send_http(url);
+    Debug.print(decoded_text);
+    return tmn_ > textToNat(decoded_text);
+    //return 0;
+
+  };
+
+  public shared (message) func getStamp() : async Int {
+    assert (_isAdmin(message.caller));
+    Debug.print("getting next timestamp");
+    let tmn_ = now() / 1000000;
+
+    return tmn_;
+    //return 0;
+
+  };
+
+  public query (message) func initialDistributionHour() : async Nat {
     return nextTimeStamp;
-  }; */
+  };
   //function to check scheduler / scheduler
   //returns counter+10 each 10 seconds when waiting for night time, and only adds +1 when already active
   public query (message) func getCounter() : async Nat {
@@ -142,25 +180,28 @@ shared ({ caller = owner }) actor class Miner({
 
   public shared (message) func startScheduler() : async Nat {
     assert (_isAdmin(message.caller));
-    await initScheduler();
+    let t_ = now() / 1000000;
+    await initScheduler(t_);
   };
 
-  func initScheduler() : async Nat {
+  func initScheduler(t_ : Int) : async Nat {
 
     cancelTimer(schedulerId);
-    let currentTimeStamp_ = now();
+    let currentTimeStamp_ = t_;
+    counter := 0;
+    nextTimeStamp := 0;
     nextTimeStamp := await getNextTimeStamp(currentTimeStamp_);
     Debug.print("stamp " #Int.toText(nextTimeStamp));
     if (nextTimeStamp == 0) return 0;
     schedulerId := recurringTimer(
       #seconds(10),
       func() : async () {
-        if (counter < 1000) { counter += 10 } else { counter := 0 };
+        if (counter < 100) { counter += 10 } else { counter := 0 };
         let time_ = now() / 1000000;
         if (time_ >= nextTimeStamp) {
-          counter := 0;
+          counter := 200;
           let res = await routine24();
-          schedulerSecondsInterval := 24 * 60 * 60;
+          //schedulerSecondsInterval := 24 * 60 * 60;
           cancelTimer(schedulerId);
           schedulerId := scheduler();
 
@@ -175,7 +216,7 @@ shared ({ caller = owner }) actor class Miner({
       // #seconds(24 * 60 * 60),
       #seconds(24 * 60 * 60),
       func() : async () {
-        if (counter < 1000) { counter += 1 } else { counter := 0 };
+        if (counter < 300) { counter += 1 } else { counter := 0 };
         let res = await routine24();
       },
     );
@@ -218,6 +259,7 @@ shared ({ caller = owner }) actor class Miner({
     minerStatusAndRewardHash := HashMap.HashMap<Text, T.MinerStatus>(0, Text.equal, Text.hash);
     usernameHash := HashMap.HashMap<Text, Nat>(0, Text.equal, Text.hash);
     revenueHash := HashMap.HashMap<Text, [T.DistributionHistory]>(0, Text.equal, Text.hash);
+    distributionHistoryList := [];
 
     minerStatus_ := []; // for upgrade
     miners_ := []; // for upgrade
@@ -447,6 +489,17 @@ shared ({ caller = owner }) actor class Miner({
 
   public query (message) func getBalance() : async Nat {
     totalBalance;
+  };
+
+  public query (message) func getDistributionList() : async [{
+    time : Int;
+    data : Text;
+  }] {
+    distributionHistoryList;
+  };
+
+  public query (message) func getCanisterTimeStamp() : async Int {
+    return now();
   };
 
   public query (message) func getWithdrawn() : async Nat {
@@ -1323,6 +1376,9 @@ shared ({ caller = owner }) actor class Miner({
     Debug.print(hashrateRewards);
     // return hashrateRewards;
     distributeMiningRewards(hashrateRewards);
+    let tm = now() / 1000000;
+    let d = [{ time = tm; data = hashrateRewards }];
+    distributionHistoryList := Array.append<{ time : Int; data : Text }>(distributionHistoryList, d);
     lastF2poolCheck := now_;
     hashrateRewards;
   };
@@ -1341,6 +1397,9 @@ shared ({ caller = owner }) actor class Miner({
     Debug.print(hashrateRewards);
     // return hashrateRewards;
     distributeMiningRewards(hashrateRewards);
+    let tm = now() / 1000000;
+    let d = [{ time = tm; data = hashrateRewards }];
+    distributionHistoryList := Array.append<{ time : Int; data : Text }>(distributionHistoryList, d);
     lastF2poolCheck := now_;
     hashrateRewards;
   };
