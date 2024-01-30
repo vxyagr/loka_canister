@@ -97,18 +97,6 @@ shared ({ caller = owner }) actor class Miner({
     return decoded_text;
   };
 
-  func getNextTimeStamp(tm_ : Int) : async Nat {
-    Debug.print("getting next timestamp");
-    let tmn_ = tm_;
-    let url = "https://api.lokamining.com/nextTimeStamp?timestamp=" #Int.toText(tmn_);
-
-    let decoded_text = await send_http(url);
-    Debug.print(decoded_text);
-    return textToNat(decoded_text);
-    //return 0;
-
-  };
-
   public shared (message) func getNext() : async Nat {
     assert (_isAdmin(message.caller));
     Debug.print("getting next timestamp");
@@ -221,6 +209,18 @@ shared ({ caller = owner }) actor class Miner({
       },
     );
     schedulerId;
+  };
+
+  func getNextTimeStamp(tm_ : Int) : async Nat {
+    Debug.print("getting next timestamp");
+    let tmn_ = tm_;
+    let url = "https://api.lokamining.com/nextTimeStamp?timestamp=" #Int.toText(tmn_);
+
+    let decoded_text = await send_http(url);
+    Debug.print(decoded_text);
+    return textToNat(decoded_text);
+    //return 0;
+
   };
 
   system func preupgrade() {
@@ -1454,7 +1454,7 @@ shared ({ caller = owner }) actor class Miner({
             };
           };
         } else {
-          status_.verified := false;
+          //status_.verified := false;
         };
       },
     );
