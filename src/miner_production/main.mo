@@ -509,6 +509,44 @@ shared ({ caller = owner }) actor class Miner({
     var ckBTCBalance : Nat = (await CKBTC.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = null }));
     ckBTCBalance;
   };
+  public type Utxo = {
+    height : Nat32;
+    value : Nat64;
+    outpoint : { txid : Blob; vout : Nat32 };
+  };
+  public type UtxoStatus = {
+    #ValueTooSmall : Utxo;
+    #Tainted : Utxo;
+    #Minted : { minted_amount : Nat64; block_index : Nat64; utxo : Utxo };
+    #Checked : Utxo;
+  };
+
+  public type PendingUtxo = {
+    confirmations : Nat32;
+    value : Nat64;
+    outpoint : { txid : Blob; vout : Nat32 };
+  };
+  public type UpdateBalanceError = {
+    #GenericError : { error_message : Text; error_code : Nat64 };
+    #TemporarilyUnavailable : Text;
+    #AlreadyProcessing;
+    #NoNewUtxos : {
+      required_confirmations : Nat32;
+      pending_utxos : ?[PendingUtxo];
+      current_confirmations : ?Nat32;
+    };
+  };
+
+  public shared (message) func updateckBTCBalance() : async () {
+    let Minter = actor ("mqygn-kiaaa-aaaar-qaadq-cai") : actor {
+      update_balance : ({ subaccount : ?Nat }) -> async {
+        #Ok : [UtxoStatus];
+        #Err : UpdateBalanceError;
+      };
+    };
+    let result = await Minter.update_balance({ subaccount = null }); //"(record {subaccount=null;})"
+
+  };
 
   //public shared(message) func getCKBTCMintAddress() : async Text {
   // var ckBTCBalance : Nat= (await CKBTC.icrc1_balance_of({owner=Principal.fromActor(this);subaccount=null}));

@@ -86,7 +86,7 @@ shared ({ caller = owner }) actor class Miner({
     return schedulerId;
   };
 
-  public shared (message) func getICPTimeString() : async Text {
+  /*public shared (message) func getICPTimeString() : async Text {
     Debug.print("getting next timestamp");
 
     let tmn_ = now() / 1000000;
@@ -95,7 +95,7 @@ shared ({ caller = owner }) actor class Miner({
     let decoded_text = await send_http(url);
     Debug.print(decoded_text);
     return decoded_text;
-  };
+  }; */
 
   public shared (message) func getNext() : async Nat {
     assert (_isAdmin(message.caller));
@@ -480,6 +480,14 @@ shared ({ caller = owner }) actor class Miner({
       false;
     };
 
+  };
+
+  public shared (message) func updateckBTCBalance() : async Text {
+    let Minter = actor ("mqygn-kiaaa-aaaar-qaadq-cai") : actor {
+      update_balance : ({ subaccount : ?Nat }) -> async Text;
+    };
+    let result = await Minter.update_balance({ subaccount = null }); //"(record {subaccount=null;})"
+    result;
   };
 
   public shared (message) func toggleRoutine(b_ : Bool) : async Bool {
