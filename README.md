@@ -171,6 +171,25 @@ record {
 })"
 
 
+$ dfx deploy tempeeyes  --argument "(variant {Init =
+record {
+     token_symbol = \"EYI\";
+     token_name = \"EYI\";
+     minting_account = record { owner = principal \"s4bfy-iaaaa-aaaam-ab4qa-cai\" };
+     transfer_fee = 0;
+     metadata = vec {};
+     feature_flags = opt record{icrc2 = true};
+     initial_balances = vec { record { record { owner = principal \"s4bfy-iaaaa-aaaam-ab4qa-cai\"; }; 1000000000000; }; };
+     archive_options = record {
+         num_blocks_to_archive = 1000;
+         trigger_threshold = 2000;
+         controller_id = principal \"s4bfy-iaaaa-aaaam-ab4qa-cai\";
+         cycles_for_archive_creation = opt 10000000000000;
+     };
+ }
+})"
+
+
 dfx deploy ckbtc_prod  --argument "(variant {Init =
 record {
      token_symbol = \"LBTC\";
@@ -226,7 +245,7 @@ Initially, this canister will act as mining site ledger, managing the data of al
 
 ```bash
 $ export MINTER = $(dfx identity get-principal)
-$ dfx deploy loka --argument '(record{admin = principal "${MINTER}"})'
+$ dfx deploy xdragon --argument '(record{admin = principal "2zosz-ithna-3dqa4-crx3i-2gy7e-o3rkp-fa6wk-mczsu-3h7bi-poiym-hae"})' --network ic
 
 ```
 

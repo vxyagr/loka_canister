@@ -27,7 +27,9 @@
   "lom": {
     "ic": "6jfrv-fyaaa-aaaam-ab2da-cai"
   },
-  "miner": {},
+  "miner": {
+    "ic": "gj4hx-pqaaa-aaaam-acisa-cai"
+  },
   "miner_prod": {
     "ic": "rfrec-ciaaa-aaaam-ab4zq-cai"
   },

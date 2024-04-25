@@ -1398,6 +1398,7 @@ shared ({ caller = owner }) actor class Miner({
 
   //@DEV- CORE FUNCTIONS TO CALCULATE 24 HOUR HASHRATE REWARD AND DISTRIBUTE IT PROPORTIONALLLY TO ALL MINERS
   // public shared(message) func routine24() : async Text {
+  //"https://btc.lokamining.com:8443/v1/transaction/earnings"
   private func routine24() : async Text {
     //assert(_isAdmin(message.caller));
     let now_ = now();
@@ -1405,7 +1406,7 @@ shared ({ caller = owner }) actor class Miner({
     let daySeconds_ = 3600 * 24;
     //if(seconds_ < daySeconds_){return "false";};
     // assert(_isAdmin(message.caller));
-    let url = "https://api.lokamining.com/calculatef2poolReward";
+    let url = "https://api.lokamining.com/calculatePoolReward";
     let hashrateRewards = await send_http(url);
     logDistribution(0, "Distribute", hashrateRewards, "", "");
 
@@ -1428,7 +1429,7 @@ shared ({ caller = owner }) actor class Miner({
     let daySeconds_ = 3600 * 24;
     //if(seconds_ < daySeconds_){return "false";};
     // assert(_isAdmin(message.caller));
-    let url = "https://api.lokamining.com/calculatef2poolReward";
+    let url = "https://api.lokamining.com/calculatePoolReward";
     let hashrateRewards = await send_http(url);
     //let hashrateRewards = "rantai1-lokabtc/1361772;rantai2-lokabtc/1356752;";
 
@@ -1451,7 +1452,7 @@ shared ({ caller = owner }) actor class Miner({
 
   func distributeMiningRewards(rewards_ : Text) {
 
-    let hashrateRewards = textSplit(rewards_, ';');
+    let hashrateRewards = textSplit(rewards_, ':');
     Buffer.iterate<T.Miner>(
       miners,
       func(miner) {
