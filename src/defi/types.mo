@@ -95,6 +95,13 @@ module {
         data : Text;
     };
 
+    public type Stake = {
+        id : Nat;
+        time : Text;
+        ckbtc : Text;
+        lokbtc : Text;
+    };
+
     public type MinerData = {
         id : Nat;
         walletAddress : Principal;
